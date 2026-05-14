@@ -55,6 +55,21 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e
 .card.ferias{border-color:#00BCD4}.card.ferias .number{color:#00BCD4}
 .card.oper{border-color:#00BCD4}.card.oper .number{color:#00BCD4}
 
+/* MOBILE SETOR BARS */
+.mobile-setor-bars{display:none}
+@media(max-width:600px){
+  .mobile-setor-bars{display:block}
+  #chartSetorCat{display:none !important}
+}
+.setor-bar-item{margin-bottom:14px}
+.setor-bar-item .setor-label{font-size:.8rem;font-weight:700;color:#e0e0e0;margin-bottom:4px;display:flex;justify-content:space-between}
+.setor-bar-item .setor-label span{font-weight:400;color:#8899aa;font-size:.75rem}
+.setor-bar-track{width:100%;height:22px;background:#0d1b2a;border-radius:6px;overflow:hidden;display:flex}
+.setor-bar-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;min-width:0}
+.setor-bar-legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.setor-bar-legend-item{display:flex;align-items:center;gap:3px;font-size:.65rem;color:#bbb}
+.setor-bar-legend-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
 /* CHARTS */
 .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
 .chart-box{background:#1a2940;border-radius:10px;padding:16px}
@@ -231,7 +246,7 @@ body.view-mode .edit-only{display:none !important}
     <div class="chart-box"><h3>Situação do Efetivo por Categoria</h3><div class="chart-wrap"><canvas id="chartSetor"></canvas></div></div>
   </div>
   <div class="charts">
-    <div class="chart-box" style="grid-column:1/-1"><h3>Distribuição por Setor e Categoria</h3><div class="chart-wrap" style="max-height:450px"><canvas id="chartSetorCat"></canvas></div></div>
+    <div class="chart-box" style="grid-column:1/-1"><h3>Distribuição por Setor e Categoria</h3><div class="chart-wrap" style="max-height:450px"><canvas id="chartSetorCat"></canvas></div><div id="mobileSetorBars" class="mobile-setor-bars"></div></div>
   </div>
   <div id="secOficiais" class="grad-section grad-section-oficiais">
     <h3 class="oficiais-title">Oficiais <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
@@ -567,6 +582,34 @@ function renderSetorCharts() {
     });
   });
 
+  // Mobile: barras horizontais empilhadas
+  let barsHTML = '';
+  setores.forEach(setor => {
+    const total = efetivo.filter(m => m.cia === setor).length;
+    if (total === 0) return;
+    const cats = {};
+    efetivo.filter(m => m.cia === setor).forEach(m => { const c = getCategoria(m); cats[c] = (cats[c]||0)+1; });
+    const pctTotal = (total / efetivo.length * 100).toFixed(1);
+    let segs = '', legend = '';
+    catKeys.forEach(k => {
+      if (cats[k] && cats[k] > 0) {
+        const pct = (cats[k] / total * 100);
+        const label = pct > 8 ? cats[k] : '';
+        segs += `<div class="setor-bar-seg" style="width:${pct}%;background:${catColors[k]}">${label}</div>`;
+        legend += `<div class="setor-bar-legend-item"><div class="dot" style="background:${catColors[k]}"></div>${catNames[k]} ${cats[k]}</div>`;
+      }
+    });
+    barsHTML += `<div class="setor-bar-item">
+      <div class="setor-label" style="color:${setorColors[setor]}">${setor} (${total}) <span>${pctTotal}% do total</span></div>
+      <div class="setor-bar-track">${segs}</div>
+      <div class="setor-bar-legend">${legend}</div>
+    </div>`;
+  });
+  document.getElementById('mobileSetorBars').innerHTML = barsHTML;
+
+  // Desktop: gráfico de dois anéis
+  if (isMobile) { if (chartSetorCat) { chartSetorCat.destroy(); chartSetorCat = null; } return; }
+
   if (chartSetorCat) chartSetorCat.destroy();
   chartSetorCat = new Chart(document.getElementById('chartSetorCat'), {
     type:'doughnut',
@@ -578,7 +621,7 @@ function renderSetorCharts() {
       ]
     },
     options:{
-      responsive:true, maintainAspectRatio:true, aspectRatio: isMobile ? 0.9 : 1.8,
+      responsive:true, maintainAspectRatio:true, aspectRatio:1.8,
       plugins:{
         tooltip:{
           callbacks:{
@@ -595,12 +638,11 @@ function renderSetorCharts() {
         legend:{
           position:'bottom',
           labels:{
-            color:'#e0e0e0', padding: isMobile ? 6 : 10, font:{size: isMobile ? 9 : 11}, boxWidth: isMobile ? 10 : 14,
+            color:'#e0e0e0', padding:10, font:{size:11}, boxWidth:14,
             generateLabels: function(chart) {
-              const setorLabels = innerLabels.map((l,i) => ({
+              return innerLabels.map((l,i) => ({
                 text: l, fillStyle: innerColors[i], strokeStyle: '#1a2940', lineWidth:2, hidden:false, index:i, datasetIndex:0
               }));
-              return setorLabels;
             }
           }
         }
