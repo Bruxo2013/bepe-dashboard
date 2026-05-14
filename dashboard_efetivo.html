@@ -413,9 +413,11 @@ function calcMetrics() {
   const of = efetivo.filter(m => oficiais_kw.some(k => m.gh.toUpperCase().includes(k))).length;
   const pr = t - of;
   const oper = t > 0 ? (aptoA / t * 100).toFixed(1) : '0.0';
-  const aptoATropa = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CIA' && !oficiais_kw.some(k => m.gh.toUpperCase().includes(k))).length;
+  const excluirTropa = ['GUARDA','VISIBILIDADE','ADJ. FISCAL DE DIA','ADJ FISCAL DE DIA'];
+  const aptoATropa = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CIA' && !oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && !excluirTropa.some(e => m.funcao.toUpperCase().includes(e))).length;
   const aptoACCSV = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CCSV').length;
-  const aptoAOf = aptoA - aptoATropa - aptoACCSV;
+  const aptoAOutros = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CIA' && !oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && excluirTropa.some(e => m.funcao.toUpperCase().includes(e))).length;
+  const aptoAOf = efetivo.filter(m => getCategoria(m) === 'oper' && oficiais_kw.some(k => m.gh.toUpperCase().includes(k))).length;
 
   const patentes = {};
   efetivo.forEach(m => { patentes[m.gh] = (patentes[m.gh] || 0) + 1; });
@@ -423,7 +425,7 @@ function calcMetrics() {
   const setores = {};
   efetivo.forEach(m => { setores[m.cia] = (setores[m.cia] || 0) + 1; });
 
-  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOf, aptoB, aptoC, lts, rr, reforma, fer, afst, armaSim, coleteSim, of, pr, oper, patentes, setores };
+  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOf, aptoAOutros, aptoB, aptoC, lts, rr, reforma, fer, afst, armaSim, coleteSim, of, pr, oper, patentes, setores };
 }
 
 function irPara(id) {
