@@ -47,6 +47,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e
 .card.cia-outros{border-color:#78909C}.card.cia-outros .number{color:#78909C}
 .card.ccsv-card{border-color:#26C6DA}.card.ccsv-card .number{color:#26C6DA}
 .card.restrito-c{border-color:#FF5722}.card.restrito-c .number{color:#FF5722}
+.card.tc-card{border-color:#8D6E63}.card.tc-card .number{color:#8D6E63}
 .card.restrito{border-color:#FF9800}.card.restrito .number{color:#FF9800}
 .card.afastado{border-color:#f44336}.card.afastado .number{color:#f44336}
 .card.ferias{border-color:#00BCD4}.card.ferias .number{color:#00BCD4}
@@ -116,6 +117,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e
 .reforma-title{color:#A1887F !important}
 .grad-reforma .grad-bar-fill{background:linear-gradient(90deg,#A1887F,#795548)}
 .grad-reforma .grad-bar-count{background:#79554820;color:#A1887F}
+.grad-section-tc{border-top:2px solid #8D6E6340;padding-top:12px}
+.tc-title{color:#8D6E63 !important}
+.grad-tc .grad-bar-fill{background:linear-gradient(90deg,#8D6E63,#6D4C41)}
+.grad-tc .grad-bar-count{background:#8D6E6320;color:#8D6E63}
 
 @media(max-width:600px){.grad-bar-meter{display:none}.grad-bar-rank{min-width:80px;font-size:.8rem}}
 
@@ -262,6 +267,11 @@ body.view-mode .edit-only{display:none !important}
     <div id="gradBarsReforma"></div>
   </div>
 
+  <div id="secTC" class="grad-section grad-section-tc">
+    <h3 class="tc-title">Tempo Certo <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsTC"></div>
+  </div>
+
 </div>
 
 <!-- MODAL ADD/EDIT -->
@@ -402,9 +412,10 @@ function saveData() {
 
 function calcMetrics() {
   const t = efetivo.length;
-  const cats = {oper:0, ferias:0, aptob:0, aptoc:0, lts:0, agrr:0, reforma:0};
+  const cats = {oper:0, ferias:0, aptob:0, aptoc:0, lts:0, agrr:0, reforma:0, tempocerto:0};
   efetivo.forEach(m => { cats[getCategoria(m)]++; });
   const aptoA = cats.oper;
+  const tc = cats.tempocerto;
   const aptoB = cats.aptob;
   const aptoC = cats.aptoc;
   const lts = cats.lts;
@@ -416,6 +427,7 @@ function calcMetrics() {
   const coleteSim = efetivo.filter(m => m.colete === 'SIM').length;
   const oficiais_kw = ['TEN CEL','MAJ','CAP','1 TEN','2 TEN','ASP OF'];
   const of = efetivo.filter(m => oficiais_kw.some(k => m.gh.toUpperCase().includes(k))).length;
+  const ofAtivos = efetivo.filter(m => oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && getCategoria(m) !== 'tempocerto').length;
   const pr = t - of;
   const oper = t > 0 ? (aptoA / t * 100).toFixed(1) : '0.0';
   const excluirTropa = ['GUARDA','VISIBILIDADE','ADJ. FISCAL DE DIA','ADJ FISCAL DE DIA'];
@@ -430,7 +442,7 @@ function calcMetrics() {
   const setores = {};
   efetivo.forEach(m => { setores[m.cia] = (setores[m.cia] || 0) + 1; });
 
-  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOf, aptoAOutros, aptoB, aptoC, lts, rr, reforma, fer, afst, armaSim, coleteSim, of, pr, oper, patentes, setores };
+  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOf, aptoAOutros, aptoB, aptoC, lts, rr, reforma, fer, tc, afst, armaSim, coleteSim, of, ofAtivos, pr, oper, patentes, setores };
 }
 
 function irPara(id) {
@@ -442,7 +454,7 @@ function irPara(id) {
 function renderCards(m) {
   document.getElementById('cardsContainer').innerHTML = `
     <div class="card total" onclick="irPara('secOficiais')"><div class="number">${m.t}</div><div class="label">Efetivo Total</div><div class="sub">${m.of} Oficiais · ${m.pr} Praças</div></div>
-    <div class="card oficiais-card" onclick="irPara('secOficiais')"><div class="number">${m.of}</div><div class="label">Oficiais</div><div class="sub">Comando e gestão</div></div>
+    <div class="card oficiais-card" onclick="irPara('secOficiais')"><div class="number">${m.ofAtivos}</div><div class="label">Oficiais</div><div class="sub">Comando e gestão</div></div>
     <div class="card tropa" onclick="irPara('secPracas')"><div class="number">${m.aptoATropa}</div><div class="label">Apto A Tropa</div><div class="sub">Somente tropa CIA</div></div>
     <div class="card cia-outros" onclick="irPara('secPracas')"><div class="number">${m.aptoAOutros}</div><div class="label">CIA Outros</div><div class="sub">Guarda · Visib. · Adj. FD</div></div>
     <div class="card ccsv-card" onclick="irPara('secPracas')"><div class="number">${m.aptoACCSV}</div><div class="label">CCSV Apto A</div><div class="sub">Apoio administrativo</div></div>
@@ -450,6 +462,7 @@ function renderCards(m) {
     <div class="card restrito-c" onclick="irPara('secAptoC')"><div class="number">${m.aptoC}</div><div class="label">Apto Cat C</div><div class="sub">Restritos</div></div>
     <div class="card afastado" onclick="irPara('secLTS')"><div class="number">${m.lts + m.rr + m.reforma}</div><div class="label">Afastados</div><div class="sub">${m.lts} LTS · ${m.rr} Ag.RR · ${m.reforma} Ref.</div></div>
     <div class="card ferias" onclick="irPara('secFerias')"><div class="number">${m.fer}</div><div class="label">De Férias</div><div class="sub">Em gozo de férias</div></div>
+    <div class="card tc-card" onclick="irPara('secTC')"><div class="number">${m.tc}</div><div class="label">Tempo Certo</div><div class="sub">Aguardando tempo certo</div></div>
     <div class="card oper" onclick="irPara('secOficiais')"><div class="number">${m.oper}%</div><div class="label">Operacionalidade</div><div class="sub">${m.aptoA} de ${m.t}</div></div>
   `;
 }
@@ -481,7 +494,8 @@ function renderCharts(m) {
     {label:'Férias', val:m.fer, color:'#00BCD4'},
     {label:'LTS', val:m.lts, color:'#f44336'},
     {label:'Ag. R.R', val:m.rr, color:'#AB47BC'},
-    {label:'Reforma', val:m.reforma, color:'#795548'}
+    {label:'Reforma', val:m.reforma, color:'#795548'},
+    {label:'Tempo Certo', val:m.tc, color:'#8D6E63'}
   ];
   catData.forEach(c => {
     if (c.val > 0) { catLabels.push(c.label); catValues.push(c.val); catColors.push(c.color); }
@@ -490,7 +504,7 @@ function renderCharts(m) {
   if (chartSetor) chartSetor.destroy();
   const catSections = {
     'Apto A':'secOficiais','Apto B':'secAptoB','Apto C':'secAptoC',
-    'Férias':'secFerias','LTS':'secLTS','Ag. R.R':'secAGRR','Reforma':'secReforma'
+    'Férias':'secFerias','LTS':'secLTS','Ag. R.R':'secAGRR','Reforma':'secReforma','Tempo Certo':'secTC'
   };
   chartSetor = new Chart(document.getElementById('chartSetor'), {
     type:'doughnut',
@@ -708,6 +722,7 @@ function getCategoria(m) {
   if (s.includes('LTS')) return 'lts';
   if (s.includes('AGUARDANDO')) return 'agrr';
   if (s.includes('REFORMA')) return 'reforma';
+  if (m.de === 'TEMPO' && m.ate === 'CERTO') return 'tempocerto';
   return 'oper';
 }
 
@@ -753,7 +768,7 @@ function renderGradBars() {
   const OFICIAIS = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM'];
   const search = document.getElementById('searchInput').value.toLowerCase();
 
-  const cats = {oper:{},ferias:{},aptob:{},aptoc:{},lts:{},agrr:{},reforma:{}};
+  const cats = {oper:{},ferias:{},aptob:{},aptoc:{},lts:{},agrr:{},reforma:{},tempocerto:{}};
   Object.keys(cats).forEach(c => GRAD_ORDER.forEach(g => cats[c][g] = []));
 
   efetivo.forEach((m, idx) => {
@@ -787,7 +802,8 @@ function renderGradBars() {
     {key:'aptoc', id:'gradBarsAptoC', css:'grad-aptoc', sec:'.grad-section-aptoc'},
     {key:'lts', id:'gradBarsLTS', css:'grad-lts', sec:'.grad-section-lts'},
     {key:'agrr', id:'gradBarsAGRR', css:'grad-agrr', sec:'.grad-section-agrr'},
-    {key:'reforma', id:'gradBarsReforma', css:'grad-reforma', sec:'.grad-section-reforma'}
+    {key:'reforma', id:'gradBarsReforma', css:'grad-reforma', sec:'.grad-section-reforma'},
+    {key:'tempocerto', id:'gradBarsTC', css:'grad-tc', sec:'.grad-section-tc'}
   ];
 
   sections.forEach(s => {
