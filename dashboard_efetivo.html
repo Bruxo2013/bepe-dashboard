@@ -433,10 +433,11 @@ function calcMetrics() {
   const ofAtivos = efetivo.filter(m => oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && getCategoria(m) !== 'tempocerto').length;
   const pr = t - of;
   const oper = t > 0 ? (aptoA / t * 100).toFixed(1) : '0.0';
-  const excluirTropa = ['GUARDA','VISIBILIDADE','ADJ. FISCAL DE DIA','ADJ FISCAL DE DIA'];
-  const aptoATropa = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CIA' && !oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && !excluirTropa.some(e => m.funcao.toUpperCase().includes(e))).length;
+  const excluirTropa = ['GUARDA','VISIBILIDADE','ADJ. FISCAL DE DIA','ADJ FISCAL DE DIA','FISCAL DE DIA','TROPA / P4'];
+  const excluirRG = ['60641'];
+  const aptoATropa = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CIA' && !oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && !excluirTropa.some(e => m.funcao.toUpperCase().includes(e)) && !excluirRG.includes(m.rg.trim())).length;
   const aptoACCSV = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CCSV').length;
-  const aptoAOutros = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CIA' && !oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && excluirTropa.some(e => m.funcao.toUpperCase().includes(e))).length;
+  const aptoAOutros = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CIA' && !oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && (excluirTropa.some(e => m.funcao.toUpperCase().includes(e)) || excluirRG.includes(m.rg.trim()))).length;
   const aptoAOf = efetivo.filter(m => getCategoria(m) === 'oper' && oficiais_kw.some(k => m.gh.toUpperCase().includes(k))).length;
 
   const patentes = {};
