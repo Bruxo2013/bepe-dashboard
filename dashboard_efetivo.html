@@ -231,8 +231,7 @@ body.view-mode .edit-only{display:none !important}
     <div class="chart-box"><h3>Situação do Efetivo por Categoria</h3><div class="chart-wrap"><canvas id="chartSetor"></canvas></div></div>
   </div>
   <div class="charts">
-    <div class="chart-box"><h3>CCSV — Efetivo Total: <span id="ccsvTotal"></span></h3><div class="chart-wrap"><canvas id="chartCCSV"></canvas></div></div>
-    <div class="chart-box" id="chartCIABox"><h3>CIA — Efetivo Total: <span id="ciaTotal"></span></h3><div class="chart-wrap"><canvas id="chartCIA"></canvas></div></div>
+    <div class="chart-box" style="grid-column:1/-1"><h3>Distribuição por Setor e Categoria</h3><div class="chart-wrap" style="max-height:450px"><canvas id="chartSetorCat"></canvas></div></div>
   </div>
   <div id="secOficiais" class="grad-section grad-section-oficiais">
     <h3 class="oficiais-title">Oficiais <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
@@ -395,8 +394,7 @@ document.getElementById('modoBadge').innerHTML = isAdmin
 const ORDEM_PATENTE = {'TEN CEL PM':1,'MAJ PM':2,'CAP PM':3,'1 TEN PM':4,'1TEN PM':4,'2 TEN PM':5,'2TEN PM':5,'ASP OF PM':6,'SUBTEN PM':7,'SUB TEN PM':7,'1 SGT PM':8,'1SGT PM':8,'2 SGT PM':9,'2SGT PM':9,'3 SGT PM':10,'3SGT PM':10,'CB PM':11,'SD PM':12};
 let chartPatente = null;
 let chartSetor = null;
-let chartCCSV = null;
-let chartCIA = null;
+let chartSetorCat = null;
 
 // DADOS_ORIGINAIS loaded from efetivo_data.js
 const DATA_VERSION_KEY = 'bepe_efetivo_version';
@@ -543,37 +541,71 @@ function renderCharts(m) {
 
 function renderSetorCharts() {
   const isMobile = window.innerWidth <= 600;
+  const catKeys = ['oper','aptob','aptoc','ferias','lts','agrr','reforma','tempocerto'];
+  const catNames = {'oper':'Apto A','aptob':'Apto B','aptoc':'Apto C','ferias':'Férias','lts':'LTS','agrr':'Ag. R.R','reforma':'Reforma','tempocerto':'T. Certo'};
   const catColors = {'oper':'#4CAF50','aptob':'#FF9800','aptoc':'#FF5722','ferias':'#00BCD4','lts':'#f44336','agrr':'#AB47BC','reforma':'#795548','tempocerto':'#8D6E63'};
-  const catNames = {'oper':'Apto A','aptob':'Apto B','aptoc':'Apto C','ferias':'Férias','lts':'LTS','agrr':'Ag. R.R','reforma':'Reforma','tempocerto':'Tempo Certo'};
+  const setores = ['OFICIAIS','CIA','CCSV'];
+  const setorColors = {'OFICIAIS':'#FFD600','CIA':'#2196F3','CCSV':'#26C6DA'};
 
-  function buildSetorData(setor) {
+  const innerLabels = [], innerValues = [], innerColors = [];
+  const outerLabels = [], outerValues = [], outerColors = [];
+
+  setores.forEach(setor => {
+    const total = efetivo.filter(m => m.cia === setor).length;
+    if (total === 0) return;
+    innerLabels.push(setor + ' (' + total + ')');
+    innerValues.push(total);
+    innerColors.push(setorColors[setor]);
     const cats = {};
     efetivo.filter(m => m.cia === setor).forEach(m => { const c = getCategoria(m); cats[c] = (cats[c]||0)+1; });
-    const labels = [], values = [], colors = [];
-    Object.keys(catNames).forEach(k => {
-      if (cats[k] && cats[k] > 0) { labels.push(catNames[k]); values.push(cats[k]); colors.push(catColors[k]); }
+    catKeys.forEach(k => {
+      if (cats[k] && cats[k] > 0) {
+        outerLabels.push(setor + ' — ' + catNames[k] + ' (' + cats[k] + ')');
+        outerValues.push(cats[k]);
+        outerColors.push(catColors[k]);
+      }
     });
-    return {labels, values, colors, total: efetivo.filter(m => m.cia === setor).length};
-  }
-
-  const ccsv = buildSetorData('CCSV');
-  document.getElementById('ccsvTotal').textContent = ccsv.total;
-  if (chartCCSV) chartCCSV.destroy();
-  chartCCSV = new Chart(document.getElementById('chartCCSV'), {
-    type:'doughnut',
-    data:{labels:ccsv.labels,datasets:[{data:ccsv.values,backgroundColor:ccsv.colors,borderColor:'#1a2940',borderWidth:3}]},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio: isMobile ? 1 : 1.5,
-      plugins:{legend:{position:'bottom',labels:{color:'#e0e0e0',padding: isMobile ? 8 : 12,font:{size: isMobile ? 10 : 11},boxWidth: isMobile ? 12 : 40}}}}
   });
 
-  const cia = buildSetorData('CIA');
-  document.getElementById('ciaTotal').textContent = cia.total;
-  if (chartCIA) chartCIA.destroy();
-  chartCIA = new Chart(document.getElementById('chartCIA'), {
+  if (chartSetorCat) chartSetorCat.destroy();
+  chartSetorCat = new Chart(document.getElementById('chartSetorCat'), {
     type:'doughnut',
-    data:{labels:cia.labels,datasets:[{data:cia.values,backgroundColor:cia.colors,borderColor:'#1a2940',borderWidth:3}]},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio: isMobile ? 1 : 1.5,
-      plugins:{legend:{position:'bottom',labels:{color:'#e0e0e0',padding: isMobile ? 8 : 12,font:{size: isMobile ? 10 : 11},boxWidth: isMobile ? 12 : 40}}}}
+    data:{
+      labels: outerLabels,
+      datasets:[
+        {label:'Setor', data:innerValues, backgroundColor:innerColors, borderColor:'#1a2940', borderWidth:3, weight:1},
+        {label:'Categoria', data:outerValues, backgroundColor:outerColors, borderColor:'#1a2940', borderWidth:2, weight:2}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true, aspectRatio: isMobile ? 0.9 : 1.8,
+      plugins:{
+        tooltip:{
+          callbacks:{
+            label: function(ctx) {
+              if (ctx.datasetIndex === 0) {
+                const pct = (ctx.parsed / efetivo.length * 100).toFixed(1);
+                return ' ' + innerLabels[ctx.dataIndex] + ' — ' + pct + '%';
+              }
+              const pct = (ctx.parsed / efetivo.length * 100).toFixed(1);
+              return ' ' + ctx.label + ' — ' + pct + '%';
+            }
+          }
+        },
+        legend:{
+          position:'bottom',
+          labels:{
+            color:'#e0e0e0', padding: isMobile ? 6 : 10, font:{size: isMobile ? 9 : 11}, boxWidth: isMobile ? 10 : 14,
+            generateLabels: function(chart) {
+              const setorLabels = innerLabels.map((l,i) => ({
+                text: l, fillStyle: innerColors[i], strokeStyle: '#1a2940', lineWidth:2, hidden:false, index:i, datasetIndex:0
+              }));
+              return setorLabels;
+            }
+          }
+        }
+      }
+    }
   });
 }
 
