@@ -631,7 +631,7 @@ function exportarCSV() {
 }
 
 function abrirCompartilhar() {
-  const base = window.location.origin + window.location.pathname;
+  const base = window.location.origin.includes('localhost') ? 'https://bruxo2013.github.io/bepe-dashboard/dashboard_efetivo.html' : window.location.origin + window.location.pathname;
   document.getElementById('linkView').value = base;
   document.getElementById('linkAdmin').value = base + '?acesso=admin';
   document.getElementById('shareOverlay').classList.add('active');
