@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Efetivo - BEPE</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="efetivo_data.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -28,6 +29,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e
 .btn-success:hover{background:#388E3C}
 .btn-outline{background:transparent;color:#4FC3F7;border:1px solid #4FC3F7}
 .btn-outline:hover{background:#4FC3F720}
+.btn-excel{color:#4CAF50;border-color:#4CAF50}.btn-excel:hover{background:#4CAF5020}
 .toolbar .search{flex:1;min-width:200px;padding:8px 14px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.85rem}
 .toolbar .search::placeholder{color:#556677}
 
@@ -216,7 +218,8 @@ body.view-mode .edit-only{display:none !important}
   <button class="btn btn-primary edit-only" onclick="openAddModal()">+ Adicionar Militar</button>
   <button class="btn btn-danger edit-only" id="btnExcluir" onclick="excluirSelecionados()" style="display:none">Excluir Selecionados (<span id="selCount">0</span>)</button>
   <input type="text" class="search" id="searchInput" placeholder="Buscar por nome, patente, função..." oninput="renderGradBars()">
-  <button class="btn btn-outline" onclick="exportarCSV()">Exportar CSV</button>
+  <button class="btn btn-outline" onclick="exportarCSV()">📄 CSV</button>
+  <button class="btn btn-outline btn-excel" onclick="exportarExcel()">📊 Excel</button>
   <button class="btn btn-success edit-only" onclick="abrirCompartilhar()">&#128279; Compartilhar</button>
   <button class="btn btn-outline edit-only" onclick="resetarDados()">Resetar Dados Originais</button>
 </div>
@@ -682,6 +685,44 @@ function exportarCSV() {
   a.href = url; a.download = `efetivo_bepe_${new Date().toISOString().slice(0,10)}.csv`;
   a.click(); URL.revokeObjectURL(url);
   showToast('CSV exportado com sucesso', 'success');
+}
+
+function exportarExcel() {
+  const headers = ['Patente','RG','ID Funcional','Nome','Setor','Função','Sit. Sanitária','Categoria','Arma','Colete','De','Até','Observação'];
+  const data = efetivo.map(m => {
+    const catMap = {oper:'Apto A',ferias:'Férias',aptob:'Apto B',aptoc:'Apto C',lts:'LTS',agrr:'Ag. R.R',reforma:'Reforma',tempocerto:'Tempo Certo'};
+    return [m.gh,m.rg,m.id,m.nome,m.cia,m.funcao,m.sit,catMap[getCategoria(m)]||'',m.arma,m.colete,m.de,m.ate,m.obs];
+  });
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  const colWidths = [14,12,14,35,12,30,16,14,8,8,10,10,20];
+  ws['!cols'] = colWidths.map(w => ({wch:w}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Efetivo BEPE');
+  const m = calcMetrics();
+  const resumo = [
+    ['RESUMO DO EFETIVO - BEPE'],
+    [''],
+    ['Categoria','Quantidade'],
+    ['Efetivo Total', m.t],
+    ['Oficiais', m.ofAtivos],
+    ['Apto A Tropa', m.aptoATropa],
+    ['CIA Outros', m.aptoAOutros],
+    ['CCSV Apto A', m.aptoACCSV],
+    ['Apto Cat B', m.aptoB],
+    ['Apto Cat C', m.aptoC],
+    ['Afastados (LTS+Ag.RR+Ref)', m.lts + m.rr + m.reforma],
+    ['De Férias', m.fer],
+    ['Tempo Certo', m.tc],
+    [''],
+    ['Operacionalidade', m.oper + '%'],
+    [''],
+    ['Gerado em', new Date().toLocaleString('pt-BR')]
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(resumo);
+  ws2['!cols'] = [{wch:30},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Resumo');
+  XLSX.writeFile(wb, `efetivo_bepe_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('Excel exportado com sucesso', 'success');
 }
 
 function abrirCompartilhar() {
