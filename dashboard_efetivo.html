@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Efetivo - BEPE</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="efetivo_data.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e0;min-height:100vh}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1a2940,#0d1b2a);padding:16px 24px;border-bottom:3px solid #2196F3;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.header h1{font-size:1.3rem;color:#fff;letter-spacing:1.5px}
+.header h1 span{color:#2196F3}
+.header .meta{text-align:right;font-size:.8rem;color:#8899aa}
+.header .meta .date{color:#4FC3F7;font-weight:600}
+
+/* TOOLBAR */
+.toolbar{background:#1a2940;padding:10px 24px;display:flex;gap:10px;border-bottom:1px solid #1e3450;flex-wrap:wrap;align-items:center}
+.btn{padding:8px 16px;border:none;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.btn-primary{background:#2196F3;color:#fff}
+.btn-primary:hover{background:#1976D2}
+.btn-danger{background:#f44336;color:#fff}
+.btn-danger:hover{background:#d32f2f}
+.btn-success{background:#4CAF50;color:#fff}
+.btn-success:hover{background:#388E3C}
+.btn-outline{background:transparent;color:#4FC3F7;border:1px solid #4FC3F7}
+.btn-outline:hover{background:#4FC3F720}
+.toolbar .search{flex:1;min-width:200px;padding:8px 14px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.85rem}
+.toolbar .search::placeholder{color:#556677}
+
+.container{max-width:1400px;margin:0 auto;padding:16px}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.card{background:#1a2940;border-radius:10px;padding:16px;text-align:center;border-left:4px solid;transition:transform .2s}
+.card:hover{transform:translateY(-2px);cursor:pointer}
+.card .number{font-size:2.4rem;font-weight:700;line-height:1.1}
+.card .label{font-size:.78rem;color:#8899aa;margin-top:4px;text-transform:uppercase;letter-spacing:1px}
+.card .sub{font-size:.7rem;color:#667788;margin-top:2px}
+.card.total{border-color:#2196F3}.card.total .number{color:#2196F3}
+.card.disp{border-color:#4CAF50}.card.disp .number{color:#4CAF50}
+.card.restrito{border-color:#FF9800}.card.restrito .number{color:#FF9800}
+.card.afastado{border-color:#f44336}.card.afastado .number{color:#f44336}
+.card.ferias{border-color:#9C27B0}.card.ferias .number{color:#9C27B0}
+.card.oper{border-color:#00BCD4}.card.oper .number{color:#00BCD4}
+
+/* CHARTS */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-box{background:#1a2940;border-radius:10px;padding:16px}
+.chart-box h3{font-size:.85rem;color:#4FC3F7;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+
+/* GRADUATION BARS */
+.grad-section{margin-bottom:20px}
+.grad-section h3{font-size:.85rem;color:#4FC3F7;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
+.grad-bar{background:#1a2940;border-radius:8px;margin-bottom:6px;overflow:hidden;transition:all .3s}
+.grad-bar-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;transition:background .2s}
+.grad-bar-header:hover{background:#1e3450}
+.grad-bar-header.active{background:#1e3450;border-left:4px solid #2196F3}
+.grad-bar-left{display:flex;align-items:center;gap:12px}
+.grad-bar-icon{font-size:1.1rem;color:#4FC3F7;transition:transform .3s;width:20px;text-align:center}
+.grad-bar-header.active .grad-bar-icon{transform:rotate(90deg)}
+.grad-bar-rank{font-weight:700;font-size:.9rem;color:#e0e0e0;min-width:120px}
+.grad-bar-count{background:#2196F320;color:#2196F3;padding:3px 12px;border-radius:12px;font-size:.78rem;font-weight:700}
+.grad-bar-meter{flex:1;height:8px;background:#0d1b2a;border-radius:4px;margin:0 16px;overflow:hidden;min-width:80px}
+.grad-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.grad-bar-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.grad-bar-body.open{max-height:2000px}
+.grad-bar-list{padding:4px 16px 12px 48px}
+.grad-bar-list table{width:100%;border-collapse:collapse;font-size:.76rem}
+.grad-bar-list th{color:#4FC3F7;text-align:left;padding:6px 8px;font-weight:600;border-bottom:1px solid #1e3450}
+.grad-bar-list td{padding:5px 8px;border-bottom:1px solid #0d1b2a}
+.grad-bar-list tr:hover{background:#1e345040}
+.grad-bar-list .btn{padding:2px 8px;font-size:.68rem}
+.grad-bar-list .cb{width:14px;height:14px;cursor:pointer;accent-color:#2196F3}
+.grad-bar-total{display:flex;align-items:center;gap:8px;padding:8px 16px 4px 48px;font-size:.75rem;color:#667788}
+.grad-bar-total span{color:#4FC3F7;font-weight:600}
+.grad-of .grad-bar-fill{background:linear-gradient(90deg,#FF9800,#FF5722)}
+.grad-pr .grad-bar-fill{background:linear-gradient(90deg,#2196F3,#1565C0)}
+.oficiais-title{color:#FF9800 !important}
+.pracas-title{color:#2196F3 !important}
+.grad-section-pracas{border-top:2px solid #2196F340;padding-top:12px}
+.grad-section-ferias{border-top:2px solid #9C27B040;padding-top:12px}
+.ferias-title{color:#9C27B0 !important}
+.grad-fe .grad-bar-fill{background:linear-gradient(90deg,#9C27B0,#7B1FA2)}
+.grad-fe .grad-bar-count{background:#9C27B020;color:#9C27B0}
+.grad-section-aptob{border-top:2px solid #FF980040;padding-top:12px}
+.aptob-title{color:#FF9800 !important}
+.grad-aptob .grad-bar-fill{background:linear-gradient(90deg,#FF9800,#F57C00)}
+.grad-aptob .grad-bar-count{background:#FF980020;color:#FF9800}
+
+.grad-section-aptoc{border-top:2px solid #FF572240;padding-top:12px}
+.aptoc-title{color:#FF5722 !important}
+.grad-aptoc .grad-bar-fill{background:linear-gradient(90deg,#FF5722,#E64A19)}
+.grad-aptoc .grad-bar-count{background:#FF572220;color:#FF5722}
+
+.grad-section-lts{border-top:2px solid #f4433640;padding-top:12px}
+.lts-title{color:#f44336 !important}
+.grad-lts .grad-bar-fill{background:linear-gradient(90deg,#f44336,#c62828)}
+.grad-lts .grad-bar-count{background:#f4433620;color:#f44336}
+
+.grad-section-agrr{border-top:2px solid #7B1FA240;padding-top:12px}
+.agrr-title{color:#AB47BC !important}
+.grad-agrr .grad-bar-fill{background:linear-gradient(90deg,#AB47BC,#7B1FA2)}
+.grad-agrr .grad-bar-count{background:#AB47BC20;color:#AB47BC}
+
+.grad-section-reforma{border-top:2px solid #79554840;padding-top:12px}
+.reforma-title{color:#A1887F !important}
+.grad-reforma .grad-bar-fill{background:linear-gradient(90deg,#A1887F,#795548)}
+.grad-reforma .grad-bar-count{background:#79554820;color:#A1887F}
+
+@media(max-width:600px){.grad-bar-meter{display:none}.grad-bar-rank{min-width:80px;font-size:.8rem}}
+
+/* TABLE BASE */
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{background:#0d1b2a;color:#4FC3F7;padding:8px 10px;text-align:left;font-weight:600;position:sticky;top:0}
+tbody td{padding:6px 10px;border-bottom:1px solid #1e3450}
+tbody tr:hover{background:#1e3450}
+
+.tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.68rem;font-weight:600}
+.tag-green{background:#4CAF5020;color:#4CAF50}
+.tag-yellow{background:#FF980020;color:#FF9800}
+.tag-red{background:#f4433620;color:#f44336}
+.tag-blue{background:#2196F320;color:#2196F3}
+.tag-purple{background:#9C27B020;color:#9C27B0}
+
+.cb{width:16px;height:16px;cursor:pointer;accent-color:#2196F3}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal{background:#1a2940;border-radius:12px;padding:24px;width:90%;max-width:700px;max-height:90vh;overflow-y:auto;border:1px solid #2196F3}
+.modal h2{color:#4FC3F7;font-size:1.1rem;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.modal h2 .close{background:none;border:none;color:#8899aa;font-size:1.5rem;cursor:pointer}
+.modal h2 .close:hover{color:#fff}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:.75rem;color:#8899aa;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select,.form-group textarea{padding:8px 12px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.85rem;font-family:inherit}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:#2196F3}
+.form-group select{cursor:pointer}
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid #1e3450}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;padding:12px 20px;border-radius:8px;color:#fff;font-size:.85rem;font-weight:600;z-index:2000;transform:translateY(100px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:#4CAF50}
+.toast.error{background:#f44336}
+.toast.info{background:#2196F3}
+
+/* ACCESS MODE */
+.modo-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:.7rem;font-weight:700;letter-spacing:.5px;margin-left:10px;vertical-align:middle}
+.modo-admin{background:#4CAF5030;color:#4CAF50;border:1px solid #4CAF5050}
+.modo-view{background:#FF980030;color:#FF9800;border:1px solid #FF980050}
+body.view-mode .edit-only{display:none !important}
+
+@media(max-width:900px){
+  .charts{grid-template-columns:1fr}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .form-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .header{padding:12px 14px;flex-direction:column;align-items:flex-start}
+  .header h1{font-size:1rem;line-height:1.3}
+  .header .meta{text-align:left;font-size:.7rem}
+  .toolbar{padding:8px 14px;flex-direction:column;gap:8px}
+  .toolbar .btn{width:100%;justify-content:center}
+  .toolbar .search{min-width:100%}
+  .container{padding:10px}
+  .cards{grid-template-columns:1fr}
+  .card .number{font-size:1.8rem}
+  .card .label{font-size:.7rem}
+  .chart-box{padding:10px}
+  .chart-box h3{font-size:.75rem}
+  .grad-section h3{font-size:.75rem}
+  .grad-bar-header{padding:10px 12px}
+  .grad-bar-rank{font-size:.8rem;min-width:80px}
+  .grad-bar-meter{display:none}
+  .grad-bar-list{padding:4px 4px 10px 4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .grad-bar-list table{font-size:.68rem;min-width:500px}
+  .grad-bar-list th,.grad-bar-list td{padding:4px 4px;white-space:nowrap}
+  .grad-bar-list .btn{padding:2px 5px;font-size:.6rem}
+  .modal{width:95%;padding:16px;max-height:85vh}
+  .modal h2{font-size:.95rem}
+  #shareOverlay .modal{max-width:95%}
+  .modo-badge{font-size:.6rem;padding:3px 8px;display:block;margin:4px 0 0 0}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>DASHBOARD</span> DO EFETIVO — BEPE <span id="modoBadge"></span></h1>
+  <div class="meta">
+    <div>Polícia Militar do Estado do Rio de Janeiro</div>
+    <div>Batalhão Especializado de Policiamento em Estádio</div>
+    <div class="date" id="headerDate"></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="btn btn-primary edit-only" onclick="openAddModal()">+ Adicionar Militar</button>
+  <button class="btn btn-danger edit-only" id="btnExcluir" onclick="excluirSelecionados()" style="display:none">Excluir Selecionados (<span id="selCount">0</span>)</button>
+  <input type="text" class="search" id="searchInput" placeholder="Buscar por nome, patente, função..." oninput="renderGradBars()">
+  <button class="btn btn-outline" onclick="exportarCSV()">Exportar CSV</button>
+  <button class="btn btn-success" onclick="abrirCompartilhar()">&#128279; Compartilhar</button>
+  <button class="btn btn-outline edit-only" onclick="resetarDados()">Resetar Dados Originais</button>
+</div>
+
+<div class="container">
+  <div class="cards" id="cardsContainer"></div>
+  <div class="charts">
+    <div class="chart-box"><h3>Distribuição por Posto/Graduação</h3><canvas id="chartPatente" height="260"></canvas></div>
+    <div class="chart-box"><h3>Situação do Efetivo por Categoria</h3><canvas id="chartSetor" height="260"></canvas></div>
+  </div>
+  <div id="secOficiais" class="grad-section grad-section-oficiais">
+    <h3 class="oficiais-title">Oficiais <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsOficiais"></div>
+  </div>
+
+  <div id="secPracas" class="grad-section grad-section-pracas">
+    <h3 class="pracas-title">Praças <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsPracas"></div>
+  </div>
+
+  <div id="secFerias" class="grad-section grad-section-ferias">
+    <h3 class="ferias-title">De Férias <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsFerias"></div>
+  </div>
+
+  <div id="secAptoB" class="grad-section grad-section-aptob">
+    <h3 class="aptob-title">Apto Cat B <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsAptoB"></div>
+  </div>
+
+  <div id="secAptoC" class="grad-section grad-section-aptoc">
+    <h3 class="aptoc-title">Apto Cat C <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsAptoC"></div>
+  </div>
+
+  <div id="secLTS" class="grad-section grad-section-lts">
+    <h3 class="lts-title">LTS (Licença Tratamento Saúde) <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsLTS"></div>
+  </div>
+
+  <div id="secAGRR" class="grad-section grad-section-agrr">
+    <h3 class="agrr-title">Aguardando R.R <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsAGRR"></div>
+  </div>
+
+  <div id="secReforma" class="grad-section grad-section-reforma">
+    <h3 class="reforma-title">Aguardando Reforma <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsReforma"></div>
+  </div>
+
+</div>
+
+<!-- MODAL ADD/EDIT -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2><span id="modalTitle">Adicionar Militar</span><button class="close" onclick="closeModal()">&times;</button></h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Graduação/Patente *</label>
+        <select id="fGh">
+          <option value="">Selecione...</option>
+          <option>TEN CEL PM</option><option>MAJ PM</option><option>CAP PM</option>
+          <option>1 TEN PM</option><option>2 TEN PM</option><option>ASP OF PM</option>
+          <option>SUBTEN PM</option><option>1 SGT PM</option><option>2 SGT PM</option>
+          <option>3 SGT PM</option><option>CB PM</option><option>SD PM</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>RG</label>
+        <input type="text" id="fRg" placeholder="Ex: 85147">
+      </div>
+      <div class="form-group full">
+        <label>Nome Completo *</label>
+        <input type="text" id="fNome" placeholder="Ex: JOÃO SILVA DOS SANTOS">
+      </div>
+      <div class="form-group">
+        <label>Companhia/Setor *</label>
+        <select id="fCia">
+          <option value="">Selecione...</option>
+          <option>OFICIAIS</option><option>CIA</option><option>CCSV</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Função</label>
+        <input type="text" id="fFuncao" placeholder="Ex: TROPA, GUARDA, CMT...">
+      </div>
+      <div class="form-group">
+        <label>Situação Sanitária</label>
+        <select id="fSit">
+          <option>APTO CAT A</option><option>APTO CAT B</option><option>APTO CAT C</option>
+          <option>LTS</option><option>AGUARDANDO R.R</option><option>AG. REFORMA</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ID Funcional</label>
+        <input type="text" id="fId" placeholder="Ex: 4323238-8">
+      </div>
+      <div class="form-group">
+        <label>Arma Acautelada</label>
+        <select id="fArma"><option>SIM</option><option>NÃO</option><option></option></select>
+      </div>
+      <div class="form-group">
+        <label>Colete Acautelado</label>
+        <select id="fColete"><option>SIM</option><option>NÃO</option><option></option></select>
+      </div>
+      <div class="form-group">
+        <label>Data Início Afastamento</label>
+        <input type="date" id="fDe">
+      </div>
+      <div class="form-group">
+        <label>Data Fim Afastamento</label>
+        <input type="date" id="fAte">
+      </div>
+      <div class="form-group full">
+        <label>Observação</label>
+        <textarea id="fObs" rows="2" placeholder="Observações adicionais..."></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btnSalvar" onclick="salvarMilitar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMPARTILHAR -->
+<div class="modal-overlay" id="shareOverlay">
+  <div class="modal" style="max-width:550px">
+    <h2><span>Compartilhar Dashboard</span><button class="close" onclick="fecharCompartilhar()">&times;</button></h2>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div>
+        <label style="font-size:.75rem;color:#FF9800;text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Link Somente Visualização</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="linkView" readonly style="flex:1;padding:10px 12px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.82rem">
+          <button class="btn btn-outline" onclick="copiarLink('linkView')">Copiar</button>
+        </div>
+        <div style="font-size:.7rem;color:#667788;margin-top:4px">Quem receber este link pode apenas consultar os dados</div>
+      </div>
+      <div>
+        <label style="font-size:.75rem;color:#4CAF50;text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Link Admin (Edição Completa)</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="linkAdmin" readonly style="flex:1;padding:10px 12px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.82rem">
+          <button class="btn btn-success" onclick="copiarLink('linkAdmin')">Copiar</button>
+        </div>
+        <div style="font-size:.7rem;color:#667788;margin-top:4px">Quem receber este link pode adicionar, editar e excluir militares</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'bepe_efetivo_data';
+let efetivo = [];
+let editingIdx = -1;
+const params = new URLSearchParams(window.location.search);
+const isAdmin = params.get('acesso') === 'admin';
+
+if (!isAdmin) document.body.classList.add('view-mode');
+document.getElementById('modoBadge').innerHTML = isAdmin
+  ? '<span class="modo-badge modo-admin">ADMIN</span>'
+  : '<span class="modo-badge modo-view">SOMENTE VISUALIZAÇÃO</span>';
+const ORDEM_PATENTE = {'TEN CEL PM':1,'MAJ PM':2,'CAP PM':3,'1 TEN PM':4,'1TEN PM':4,'2 TEN PM':5,'2TEN PM':5,'ASP OF PM':6,'SUBTEN PM':7,'SUB TEN PM':7,'1 SGT PM':8,'1SGT PM':8,'2 SGT PM':9,'2SGT PM':9,'3 SGT PM':10,'3SGT PM':10,'CB PM':11,'SD PM':12};
+let chartPatente = null;
+let chartSetor = null;
+
+// DADOS_ORIGINAIS loaded from efetivo_data.js
+const DATA_VERSION_KEY = 'bepe_efetivo_version';
+
+function loadData() {
+  const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
+  const currentVersion = String(DADOS_ORIGINAIS.length);
+  const saved = localStorage.getItem(STORAGE_KEY);
+
+  if (saved && savedVersion === currentVersion) {
+    try { efetivo = JSON.parse(saved); return; } catch(e) {}
+  }
+
+  efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
+  localStorage.setItem(DATA_VERSION_KEY, currentVersion);
+  saveData();
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(efetivo));
+}
+
+function calcMetrics() {
+  const t = efetivo.length;
+  const aptoA = efetivo.filter(m => m.sit === 'APTO CAT A').length;
+  const aptoB = efetivo.filter(m => m.sit === 'APTO CAT B').length;
+  const aptoC = efetivo.filter(m => m.sit === 'APTO CAT C').length;
+  const lts = efetivo.filter(m => m.sit.includes('LTS')).length;
+  const rr = efetivo.filter(m => m.sit.includes('AGUARDANDO')).length;
+  const reforma = efetivo.filter(m => m.sit.toUpperCase().includes('REFORMA')).length;
+  const fer = efetivo.filter(m => m.funcao.toUpperCase().includes('FÉRIAS') || m.funcao.toUpperCase().includes('FERIAS')).length;
+  const afst = lts + rr + reforma + fer;
+  const armaSim = efetivo.filter(m => m.arma === 'SIM').length;
+  const coleteSim = efetivo.filter(m => m.colete === 'SIM').length;
+  const oficiais_kw = ['TEN CEL','MAJ','CAP','1 TEN','2 TEN','ASP OF'];
+  const of = efetivo.filter(m => oficiais_kw.some(k => m.gh.toUpperCase().includes(k))).length;
+  const pr = t - of;
+  const oper = t > 0 ? (aptoA / t * 100).toFixed(1) : '0.0';
+
+  const patentes = {};
+  efetivo.forEach(m => { patentes[m.gh] = (patentes[m.gh] || 0) + 1; });
+
+  const setores = {};
+  efetivo.forEach(m => { setores[m.cia] = (setores[m.cia] || 0) + 1; });
+
+  return { t, aptoA, aptoB, aptoC, lts, rr, reforma, fer, afst, armaSim, coleteSim, of, pr, oper, patentes, setores };
+}
+
+function irPara(id) {
+  const el = document.getElementById(id);
+  const y = el.getBoundingClientRect().top + window.scrollY - 80;
+  window.scrollTo({top: y, behavior: 'smooth'});
+}
+
+function renderCards(m) {
+  document.getElementById('cardsContainer').innerHTML = `
+    <div class="card total" onclick="irPara('secOficiais')"><div class="number">${m.t}</div><div class="label">Efetivo Total</div><div class="sub">${m.of} Oficiais · ${m.pr} Praças</div></div>
+    <div class="card disp" onclick="irPara('secOficiais')"><div class="number">${m.aptoA}</div><div class="label">Aptos (Cat A)</div><div class="sub">${m.oper}% do efetivo</div></div>
+    <div class="card restrito" onclick="irPara('secAptoB')"><div class="number">${m.aptoB + m.aptoC}</div><div class="label">Restritos (B+C)</div><div class="sub">${m.aptoB} Cat B · ${m.aptoC} Cat C</div></div>
+    <div class="card afastado" onclick="irPara('secLTS')"><div class="number">${m.afst}</div><div class="label">Afastados</div><div class="sub">${m.lts} LTS · ${m.rr} Ag.RR · ${m.fer} Férias</div></div>
+    <div class="card ferias" style="cursor:default"><div class="number">${m.armaSim}</div><div class="label">Arma Acautelada</div><div class="sub">${m.coleteSim} com colete</div></div>
+    <div class="card oper" onclick="irPara('secOficiais')"><div class="number">${m.oper}%</div><div class="label">Operacionalidade</div><div class="sub">${m.aptoA} de ${m.t}</div></div>
+  `;
+}
+
+function renderCharts(m) {
+  const patOrder = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
+  const patLabels = patOrder.filter(p => m.patentes[p]);
+  const patValues = patLabels.map(p => m.patentes[p] || 0);
+  const patColors = patLabels.map((_,i) => {
+    const oficiais = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM'];
+    return oficiais.includes(patLabels[i]) ? '#FF9800' : '#2196F3';
+  });
+
+  if (chartPatente) chartPatente.destroy();
+  chartPatente = new Chart(document.getElementById('chartPatente'), {
+    type:'bar',
+    data:{labels:patLabels,datasets:[{data:patValues,backgroundColor:patColors,borderRadius:4,barThickness:18}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#1e3450'},ticks:{color:'#8899aa'}},y:{grid:{display:false},ticks:{color:'#e0e0e0',font:{size:11}}}}}
+  });
+
+  const catLabels = [];
+  const catValues = [];
+  const catColors = [];
+  const catData = [
+    {label:'Apto A', val:m.aptoA, color:'#4CAF50'},
+    {label:'Apto B', val:m.aptoB, color:'#FF9800'},
+    {label:'Apto C', val:m.aptoC, color:'#FF5722'},
+    {label:'Férias', val:m.fer, color:'#00BCD4'},
+    {label:'LTS', val:m.lts, color:'#f44336'},
+    {label:'Ag. R.R', val:m.rr, color:'#AB47BC'},
+    {label:'Reforma', val:m.reforma, color:'#795548'}
+  ];
+  catData.forEach(c => {
+    if (c.val > 0) { catLabels.push(c.label); catValues.push(c.val); catColors.push(c.color); }
+  });
+
+  if (chartSetor) chartSetor.destroy();
+  chartSetor = new Chart(document.getElementById('chartSetor'), {
+    type:'doughnut',
+    data:{labels:catLabels,datasets:[{data:catValues,backgroundColor:catColors,borderColor:'#1a2940',borderWidth:3}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e0e0e0',padding:12,font:{size:11}}}}}
+  });
+}
+
+function sitTag(sit) {
+  const s = sit.toUpperCase();
+  if (s === 'APTO CAT A') return `<span class="tag tag-green">${sit}</span>`;
+  if (s.includes('CAT B')) return `<span class="tag tag-yellow">${sit}</span>`;
+  if (s.includes('CAT C')) return `<span class="tag tag-yellow">${sit}</span>`;
+  if (s.includes('LTS')) return `<span class="tag tag-red">${sit}</span>`;
+  if (s.includes('AGUARDANDO')) return `<span class="tag tag-purple">${sit}</span>`;
+  return `<span class="tag tag-blue">${sit}</span>`;
+}
+
+
+function updateSelection() {
+  const checked = document.querySelectorAll('.row-cb:checked');
+  const btn = document.getElementById('btnExcluir');
+  const count = document.getElementById('selCount');
+  if (checked.length > 0) {
+    btn.style.display = 'flex';
+    count.textContent = checked.length;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+
+function openAddModal() {
+  editingIdx = -1;
+  document.getElementById('modalTitle').textContent = 'Adicionar Militar';
+  document.getElementById('fGh').value = '';
+  document.getElementById('fRg').value = '';
+  document.getElementById('fNome').value = '';
+  document.getElementById('fCia').value = '';
+  document.getElementById('fFuncao').value = '';
+  document.getElementById('fSit').value = 'APTO CAT A';
+  document.getElementById('fId').value = '';
+  document.getElementById('fArma').value = 'SIM';
+  document.getElementById('fColete').value = 'SIM';
+  document.getElementById('fDe').value = '';
+  document.getElementById('fAte').value = '';
+  document.getElementById('fObs').value = '';
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function editarMilitar(idx) {
+  editingIdx = idx;
+  const m = efetivo[idx];
+  document.getElementById('modalTitle').textContent = 'Editar Militar';
+  document.getElementById('fGh').value = m.gh;
+  document.getElementById('fRg').value = m.rg;
+  document.getElementById('fNome').value = m.nome;
+  document.getElementById('fCia').value = m.cia;
+  document.getElementById('fFuncao').value = m.funcao;
+  document.getElementById('fSit').value = m.sit;
+  document.getElementById('fId').value = m.id || '';
+  document.getElementById('fArma').value = m.arma;
+  document.getElementById('fColete').value = m.colete;
+  document.getElementById('fDe').value = m.de;
+  document.getElementById('fAte').value = m.ate;
+  document.getElementById('fObs').value = m.obs;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+function salvarMilitar() {
+  const gh = document.getElementById('fGh').value;
+  const nome = document.getElementById('fNome').value.trim().toUpperCase();
+  const cia = document.getElementById('fCia').value;
+
+  if (!gh || !nome || !cia) {
+    showToast('Preencha os campos obrigatórios: Patente, Nome e Setor', 'error');
+    return;
+  }
+
+  const mil = {
+    gh, nome, cia,
+    rg: document.getElementById('fRg').value.trim(),
+    id: document.getElementById('fId').value.trim(),
+    funcao: document.getElementById('fFuncao').value.trim().toUpperCase(),
+    sit: document.getElementById('fSit').value,
+    arma: document.getElementById('fArma').value,
+    colete: document.getElementById('fColete').value,
+    de: document.getElementById('fDe').value,
+    ate: document.getElementById('fAte').value,
+    obs: document.getElementById('fObs').value.trim(),
+    ferias: ''
+  };
+
+  if (editingIdx >= 0) {
+    efetivo[editingIdx] = mil;
+    showToast(`${nome} atualizado com sucesso`, 'success');
+  } else {
+    efetivo.push(mil);
+    showToast(`${nome} adicionado ao efetivo`, 'success');
+  }
+  efetivo.sort((a,b) => {
+    const oa = ORDEM_PATENTE[a.gh.trim().toUpperCase()] || 99;
+    const ob = ORDEM_PATENTE[b.gh.trim().toUpperCase()] || 99;
+    if (oa !== ob) return oa - ob;
+    const ra = parseInt(a.rg) || 999999;
+    const rb = parseInt(b.rg) || 999999;
+    return ra - rb;
+  });
+
+  saveData();
+  closeModal();
+  refreshAll();
+}
+
+function excluirUm(idx) {
+  const nome = efetivo[idx].nome;
+  if (confirm(`Confirma exclusão de ${nome} do efetivo?`)) {
+    efetivo.splice(idx, 1);
+    saveData();
+    showToast(`${nome} excluído do efetivo`, 'info');
+    refreshAll();
+  }
+}
+
+function excluirSelecionados() {
+  const checked = [...document.querySelectorAll('.row-cb:checked')];
+  const idxs = checked.map(cb => parseInt(cb.dataset.idx)).sort((a,b) => b-a);
+  if (confirm(`Confirma exclusão de ${idxs.length} militar(es)?`)) {
+    idxs.forEach(i => efetivo.splice(i, 1));
+    saveData();
+    showToast(`${idxs.length} militar(es) excluído(s)`, 'info');
+    document.getElementById('cbAll').checked = false;
+    refreshAll();
+  }
+}
+
+function resetarDados() {
+  if (confirm('Isso vai restaurar os dados originais da planilha. Todas as alterações serão perdidas. Continuar?')) {
+    localStorage.removeItem(STORAGE_KEY);
+    loadData();
+    showToast('Dados restaurados ao original', 'info');
+    refreshAll();
+  }
+}
+
+function exportarCSV() {
+  const headers = ['Patente','RG','ID Funcional','Nome','Setor','Função','Sit. Sanitária','Arma','Colete','De','Até','Observação'];
+  const rows = efetivo.map(m => [m.gh,m.rg,m.id,m.nome,m.cia,m.funcao,m.sit,m.arma,m.colete,m.de,m.ate,m.obs].map(v => `"${(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `efetivo_bepe_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('CSV exportado com sucesso', 'success');
+}
+
+function abrirCompartilhar() {
+  const base = window.location.origin + window.location.pathname;
+  document.getElementById('linkView').value = base;
+  document.getElementById('linkAdmin').value = base + '?acesso=admin';
+  document.getElementById('shareOverlay').classList.add('active');
+}
+
+function fecharCompartilhar() {
+  document.getElementById('shareOverlay').classList.remove('active');
+}
+
+function copiarLink(inputId) {
+  const input = document.getElementById(inputId);
+  navigator.clipboard.writeText(input.value).then(() => {
+    showToast('Link copiado!', 'success');
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    showToast('Link copiado!', 'success');
+  });
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function getCategoria(m) {
+  const f = m.funcao.toUpperCase();
+  if (f.includes('FÉRIAS') || f.includes('FERIAS')) return 'ferias';
+  const s = m.sit.toUpperCase();
+  if (s === 'APTO CAT B') return 'aptob';
+  if (s === 'APTO CAT C') return 'aptoc';
+  if (s.includes('LTS')) return 'lts';
+  if (s.includes('AGUARDANDO')) return 'agrr';
+  if (s.includes('REFORMA')) return 'reforma';
+  return 'oper';
+}
+
+function hasSearch() {
+  return document.getElementById('searchInput').value.trim().length > 0;
+}
+
+function buildGradHTML(list, grad, cssClass) {
+  const rows = list.map((m,i) => `<tr>
+    ${isAdmin ? `<td><input type="checkbox" class="cb row-cb" data-idx="${m._idx}" onchange="updateSelection()"></td>` : ''}
+    <td style="color:#667788">${i+1}</td>
+    <td>${m.rg}</td>
+    <td style="font-weight:500">${m.nome}</td>
+    <td>${m.cia}</td>
+    <td>${m.funcao}</td>
+    <td>${sitTag(m.sit)}</td>
+    <td>${m.arma === 'SIM' ? '<span class="tag tag-green">SIM</span>' : m.arma === 'NÃO' ? '<span class="tag tag-red">NÃO</span>' : '—'}</td>
+    ${isAdmin ? `<td>
+      <button class="btn btn-outline" onclick="editarMilitar(${m._idx})">Editar</button>
+      <button class="btn btn-danger" onclick="excluirUm(${m._idx})">Excluir</button>
+    </td>` : ''}
+  </tr>`).join('');
+  const searching = hasSearch();
+  return `<div class="grad-bar ${cssClass}">
+    <div class="grad-bar-header${searching ? ' active' : ''}" onclick="toggleGrad(this)">
+      <div class="grad-bar-left">
+        <span class="grad-bar-icon">&#9654;</span>
+        <span class="grad-bar-rank">${grad}</span>
+      </div>
+      <div class="grad-bar-meter"><div class="grad-bar-fill" style="width:100%"></div></div>
+      <span class="grad-bar-count">${list.length}</span>
+    </div>
+    <div class="grad-bar-body${searching ? ' open' : ''}"
+      <div class="grad-bar-list">
+        <table><thead><tr>${isAdmin ? '<th style="width:30px"><input type="checkbox" class="cb grad-cb-all" onchange="toggleGradAll(this)"></th>' : ''}<th>#</th><th>RG</th><th>Nome</th><th>Setor</th><th>Função</th><th>Situação</th><th>Arma</th>${isAdmin ? '<th>Ações</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderGradBars() {
+  const GRAD_ORDER = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
+  const OFICIAIS = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM'];
+  const search = document.getElementById('searchInput').value.toLowerCase();
+
+  const cats = {oper:{},ferias:{},aptob:{},aptoc:{},lts:{},agrr:{},reforma:{}};
+  Object.keys(cats).forEach(c => GRAD_ORDER.forEach(g => cats[c][g] = []));
+
+  efetivo.forEach((m, idx) => {
+    if (search && !(m.nome.toLowerCase().includes(search) || m.gh.toLowerCase().includes(search) || m.funcao.toLowerCase().includes(search) || m.cia.toLowerCase().includes(search) || m.rg.toLowerCase().includes(search))) return;
+    const key = GRAD_ORDER.find(g => g === m.gh.trim().toUpperCase()) || m.gh.trim().toUpperCase();
+    const cat = getCategoria(m);
+    if (!cats[cat][key]) cats[cat][key] = [];
+    cats[cat][key].push({...m, _idx: idx});
+  });
+
+  Object.values(cats).forEach(g => Object.values(g).forEach(arr => arr.sort((a,b) => (parseInt(a.rg)||999999) - (parseInt(b.rg)||999999))));
+
+  const GRAD_OFICIAIS = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM'];
+  const GRAD_PRACAS = ['SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
+
+  document.getElementById('gradBarsOficiais').innerHTML = GRAD_OFICIAIS.map(grad => {
+    const list = cats.oper[grad];
+    if (!list || list.length === 0) return '';
+    return buildGradHTML(list, grad, 'grad-of');
+  }).join('');
+
+  document.getElementById('gradBarsPracas').innerHTML = GRAD_PRACAS.map(grad => {
+    const list = cats.oper[grad];
+    if (!list || list.length === 0) return '';
+    return buildGradHTML(list, grad, 'grad-pr');
+  }).join('');
+
+  const sections = [
+    {key:'ferias', id:'gradBarsFerias', css:'grad-fe', sec:'.grad-section-ferias'},
+    {key:'aptob', id:'gradBarsAptoB', css:'grad-aptob', sec:'.grad-section-aptob'},
+    {key:'aptoc', id:'gradBarsAptoC', css:'grad-aptoc', sec:'.grad-section-aptoc'},
+    {key:'lts', id:'gradBarsLTS', css:'grad-lts', sec:'.grad-section-lts'},
+    {key:'agrr', id:'gradBarsAGRR', css:'grad-agrr', sec:'.grad-section-agrr'},
+    {key:'reforma', id:'gradBarsReforma', css:'grad-reforma', sec:'.grad-section-reforma'}
+  ];
+
+  sections.forEach(s => {
+    const total = Object.values(cats[s.key]).reduce((sum,a) => sum + a.length, 0);
+    document.getElementById(s.id).innerHTML = GRAD_ORDER.map(grad => {
+      const list = cats[s.key][grad];
+      if (!list || list.length === 0) return '';
+      return buildGradHTML(list, grad, s.css);
+    }).join('');
+    document.querySelector(s.sec).style.display = total > 0 ? 'block' : 'none';
+  });
+}
+
+function toggleGrad(header) {
+  header.nextElementSibling.classList.toggle('open');
+  header.classList.toggle('active');
+}
+
+function toggleGradAll(cb) {
+  const table = cb.closest('table');
+  table.querySelectorAll('.row-cb').forEach(c => c.checked = cb.checked);
+  updateSelection();
+}
+
+function refreshAll() {
+  const m = calcMetrics();
+  renderCards(m);
+  renderCharts(m);
+  renderGradBars();
+  updateSelection();
+}
+
+// INIT
+document.getElementById('headerDate').textContent = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase() + ' — Atualizado agora';
+loadData();
+
+refreshAll();
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.getElementById('shareOverlay').addEventListener('click', function(e) {
+  if (e.target === this) fecharCompartilhar();
+});
+</script>
+
+</body>
+</html>
