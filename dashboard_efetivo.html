@@ -206,7 +206,7 @@ body.view-mode .edit-only{display:none !important}
   <button class="btn btn-danger edit-only" id="btnExcluir" onclick="excluirSelecionados()" style="display:none">Excluir Selecionados (<span id="selCount">0</span>)</button>
   <input type="text" class="search" id="searchInput" placeholder="Buscar por nome, patente, função..." oninput="renderGradBars()">
   <button class="btn btn-outline" onclick="exportarCSV()">Exportar CSV</button>
-  <button class="btn btn-success" onclick="abrirCompartilhar()">&#128279; Compartilhar</button>
+  <button class="btn btn-success edit-only" onclick="abrirCompartilhar()">&#128279; Compartilhar</button>
   <button class="btn btn-outline edit-only" onclick="resetarDados()">Resetar Dados Originais</button>
 </div>
 
