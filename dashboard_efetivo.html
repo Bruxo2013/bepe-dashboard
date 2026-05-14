@@ -481,11 +481,33 @@ function renderCharts(m) {
   });
 
   if (chartSetor) chartSetor.destroy();
+  const catSections = {
+    'Apto A':'secOficiais','Apto B':'secAptoB','Apto C':'secAptoC',
+    'Férias':'secFerias','LTS':'secLTS','Ag. R.R':'secAGRR','Reforma':'secReforma'
+  };
   chartSetor = new Chart(document.getElementById('chartSetor'), {
     type:'doughnut',
     data:{labels:catLabels,datasets:[{data:catValues,backgroundColor:catColors,borderColor:'#1a2940',borderWidth:3}]},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio: isMobile ? 1 : 1.5,plugins:{legend:{position: isMobile ? 'bottom' : 'bottom',labels:{color:'#e0e0e0',padding: isMobile ? 8 : 12,font:{size: isMobile ? 10 : 11},boxWidth: isMobile ? 12 : 40}}}}
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio: isMobile ? 1 : 1.5,
+      onClick:(evt, elements) => {
+        if (elements.length > 0) {
+          const label = catLabels[elements[0].index];
+          const secId = catSections[label];
+          if (secId) irPara(secId);
+        }
+      },
+      plugins:{legend:{
+        position:'bottom',
+        onClick:(evt, item, legend) => {
+          const label = item.text;
+          const secId = catSections[label];
+          if (secId) irPara(secId);
+        },
+        labels:{color:'#e0e0e0',padding: isMobile ? 8 : 12,font:{size: isMobile ? 10 : 11},boxWidth: isMobile ? 12 : 40,cursor:'pointer'}
+      }},
+    }
   });
+  document.getElementById('chartSetor').style.cursor = 'pointer';
 }
 
 function sitTag(sit) {
