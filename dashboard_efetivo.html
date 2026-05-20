@@ -464,10 +464,10 @@ let chartCIA = null;
 // DADOS_ORIGINAIS loaded from efetivo_data.js
 const DATA_VERSION_KEY = 'bepe_efetivo_version';
 let firebaseReady = false;
-let ignoreNextFirebaseUpdate = false;
+let savingToFirebase = false;
 
 function loadData() {
-  // Load from localStorage as initial data (fast)
+  // Load from localStorage as fast initial render
   const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
   const currentVersion = String(DADOS_ORIGINAIS.length);
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -483,33 +483,56 @@ function loadData() {
 
   // Listen to Firebase for real-time sync
   efetivoRef.on('value', (snapshot) => {
-    if (ignoreNextFirebaseUpdate) { ignoreNextFirebaseUpdate = false; return; }
     const data = snapshot.val();
-    if (data && Array.isArray(data)) {
-      efetivo = data;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(efetivo));
-      localStorage.setItem(DATA_VERSION_KEY, String(DADOS_ORIGINAIS.length));
+    if (data) {
+      // Firebase has data — convert object to array if needed
+      let arr = Array.isArray(data) ? data : Object.values(data);
+      if (arr.length > 0) {
+        // Only update if data actually changed
+        const newJSON = JSON.stringify(arr);
+        const curJSON = JSON.stringify(efetivo);
+        if (newJSON !== curJSON) {
+          efetivo = arr;
+          localStorage.setItem(STORAGE_KEY, newJSON);
+          localStorage.setItem(DATA_VERSION_KEY, currentVersion);
+          refreshAll();
+          showToast('🔄 Dados atualizados em tempo real!', 'info');
+          console.log('🔄 Firebase sync: ' + efetivo.length + ' registros');
+        }
+        firebaseReady = true;
+      }
+    } else {
+      // Firebase empty — push initial data
+      console.log('📤 Firebase vazio, enviando dados iniciais...');
       firebaseReady = true;
-      refreshAll();
-      console.log('🔄 Dados sincronizados do Firebase (' + efetivo.length + ' registros)');
-    } else if (!firebaseReady) {
-      // First time: push local data to Firebase
-      firebaseReady = true;
-      saveData();
+      efetivoRef.set(efetivo).then(() => {
+        console.log('✅ Dados iniciais enviados ao Firebase');
+        showToast('✅ Dados enviados ao Firebase', 'success');
+      }).catch(err => {
+        console.error('❌ Erro ao enviar dados iniciais:', err);
+        showToast('❌ Erro Firebase: ' + err.message, 'danger');
+      });
     }
+  }, (err) => {
+    console.error('❌ Erro no listener Firebase:', err);
+    showToast('❌ Erro conexão Firebase: ' + err.message, 'danger');
+    const badge = document.getElementById('syncBadge');
+    if (badge) { badge.style.background = '#f44336'; badge.textContent = '❌ ERRO'; }
   });
 }
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(efetivo));
-  // Sync to Firebase (admin only writes, but all users read)
-  if (isAdmin) {
-    ignoreNextFirebaseUpdate = true;
+  // Sync to Firebase
+  if (isAdmin && !savingToFirebase) {
+    savingToFirebase = true;
     efetivoRef.set(efetivo).then(() => {
+      savingToFirebase = false;
       console.log('✅ Dados salvos no Firebase');
     }).catch((err) => {
+      savingToFirebase = false;
       console.error('❌ Erro ao salvar no Firebase:', err);
-      ignoreNextFirebaseUpdate = false;
+      showToast('❌ Erro ao salvar: ' + err.message, 'danger');
     });
   }
 }
