@@ -7,6 +7,23 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="efetivo_data.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBVpNhZE0pujZQRvcGlieqPJmoZTbxwNEQ",
+    authDomain: "bepe-dashboard.firebaseapp.com",
+    databaseURL: "https://bepe-dashboard-default-rtdb.firebaseio.com",
+    projectId: "bepe-dashboard",
+    storageBucket: "bepe-dashboard.firebasestorage.app",
+    messagingSenderId: "170956670588",
+    appId: "1:170956670588:web:5068c4ebee85c874182bf9"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const efetivoRef = db.ref('efetivo');
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e0;min-height:100vh}
@@ -424,8 +441,20 @@ const isAdmin = params.get('acesso') === 'admin';
 
 if (!isAdmin) document.body.classList.add('view-mode');
 document.getElementById('modoBadge').innerHTML = isAdmin
-  ? '<span class="modo-badge modo-admin">ADMIN</span>'
-  : '<span class="modo-badge modo-view">SOMENTE VISUALIZAÇÃO</span>';
+  ? '<span class="modo-badge modo-admin">ADMIN</span> <span id="syncBadge" class="modo-badge" style="background:#FF9800;font-size:.6rem;padding:2px 8px;border-radius:10px;color:#fff">⏳ CONECTANDO...</span>'
+  : '<span class="modo-badge modo-view">SOMENTE VISUALIZAÇÃO</span> <span id="syncBadge" class="modo-badge" style="background:#FF9800;font-size:.6rem;padding:2px 8px;border-radius:10px;color:#fff">⏳ CONECTANDO...</span>';
+
+// Monitor Firebase connection
+db.ref('.info/connected').on('value', (snap) => {
+  const badge = document.getElementById('syncBadge');
+  if (snap.val() === true) {
+    badge.style.background = '#4CAF50';
+    badge.textContent = '🟢 ONLINE';
+  } else {
+    badge.style.background = '#f44336';
+    badge.textContent = '🔴 OFFLINE';
+  }
+});
 const ORDEM_PATENTE = {'TEN CEL PM':1,'MAJ PM':2,'CAP PM':3,'1 TEN PM':4,'1TEN PM':4,'2 TEN PM':5,'2TEN PM':5,'ASP OF PM':6,'SUBTEN PM':7,'SUB TEN PM':7,'1 SGT PM':8,'1SGT PM':8,'2 SGT PM':9,'2SGT PM':9,'3 SGT PM':10,'3SGT PM':10,'CB PM':11,'SD PM':12};
 let chartPatente = null;
 let chartSetor = null;
@@ -434,23 +463,55 @@ let chartCIA = null;
 
 // DADOS_ORIGINAIS loaded from efetivo_data.js
 const DATA_VERSION_KEY = 'bepe_efetivo_version';
+let firebaseReady = false;
+let ignoreNextFirebaseUpdate = false;
 
 function loadData() {
+  // Load from localStorage as initial data (fast)
   const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
   const currentVersion = String(DADOS_ORIGINAIS.length);
   const saved = localStorage.getItem(STORAGE_KEY);
 
   if (saved && savedVersion === currentVersion) {
-    try { efetivo = JSON.parse(saved); return; } catch(e) {}
+    try { efetivo = JSON.parse(saved); } catch(e) {
+      efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
+    }
+  } else {
+    efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
+    localStorage.setItem(DATA_VERSION_KEY, currentVersion);
   }
 
-  efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
-  localStorage.setItem(DATA_VERSION_KEY, currentVersion);
-  saveData();
+  // Listen to Firebase for real-time sync
+  efetivoRef.on('value', (snapshot) => {
+    if (ignoreNextFirebaseUpdate) { ignoreNextFirebaseUpdate = false; return; }
+    const data = snapshot.val();
+    if (data && Array.isArray(data)) {
+      efetivo = data;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(efetivo));
+      localStorage.setItem(DATA_VERSION_KEY, String(DADOS_ORIGINAIS.length));
+      firebaseReady = true;
+      refreshAll();
+      console.log('🔄 Dados sincronizados do Firebase (' + efetivo.length + ' registros)');
+    } else if (!firebaseReady) {
+      // First time: push local data to Firebase
+      firebaseReady = true;
+      saveData();
+    }
+  });
 }
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(efetivo));
+  // Sync to Firebase (admin only writes, but all users read)
+  if (isAdmin) {
+    ignoreNextFirebaseUpdate = true;
+    efetivoRef.set(efetivo).then(() => {
+      console.log('✅ Dados salvos no Firebase');
+    }).catch((err) => {
+      console.error('❌ Erro ao salvar no Firebase:', err);
+      ignoreNextFirebaseUpdate = false;
+    });
+  }
 }
 
 function calcMetrics() {
@@ -786,8 +847,8 @@ function excluirSelecionados() {
 
 function resetarDados() {
   if (confirm('Isso vai restaurar os dados originais da planilha. Todas as alterações serão perdidas. Continuar?')) {
-    localStorage.removeItem(STORAGE_KEY);
-    loadData();
+    efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
+    saveData();
     showToast('Dados restaurados ao original', 'info');
     refreshAll();
   }
