@@ -485,8 +485,9 @@ function loadData() {
   efetivoRef.on('value', (snapshot) => {
     const data = snapshot.val();
     if (data) {
-      // Firebase has data — convert object to array if needed
+      // Firebase has data — convert object to array, filtering invalid entries
       let arr = Array.isArray(data) ? data : Object.values(data);
+      arr = arr.filter(m => m && typeof m === 'object' && m.nome && m.funcao && m.sit);
       if (arr.length > 0) {
         // Only update if data actually changed
         const newJSON = JSON.stringify(arr);
