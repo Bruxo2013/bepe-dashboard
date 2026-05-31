@@ -7,7 +7,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="efetivo_data.js"></script>
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
@@ -23,29 +22,24 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const efetivoRef = db.ref('efetivo');
+  const fotosRef = db.ref('fotos');
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e0;min-height:100vh}
 
-/* HEADER */
 .header{background:linear-gradient(135deg,#1a2940,#0d1b2a);padding:16px 24px;border-bottom:3px solid #2196F3;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .header h1{font-size:1.3rem;color:#fff;letter-spacing:1.5px}
 .header h1 span{color:#2196F3}
 .header .meta{text-align:right;font-size:.8rem;color:#8899aa}
 .header .meta .date{color:#4FC3F7;font-weight:600}
 
-/* TOOLBAR */
 .toolbar{background:#1a2940;padding:10px 24px;display:flex;gap:10px;border-bottom:1px solid #1e3450;flex-wrap:wrap;align-items:center}
 .btn{padding:8px 16px;border:none;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
-.btn-primary{background:#2196F3;color:#fff}
-.btn-primary:hover{background:#1976D2}
-.btn-danger{background:#f44336;color:#fff}
-.btn-danger:hover{background:#d32f2f}
-.btn-success{background:#4CAF50;color:#fff}
-.btn-success:hover{background:#388E3C}
-.btn-outline{background:transparent;color:#4FC3F7;border:1px solid #4FC3F7}
-.btn-outline:hover{background:#4FC3F720}
+.btn-primary{background:#2196F3;color:#fff}.btn-primary:hover{background:#1976D2}
+.btn-danger{background:#f44336;color:#fff}.btn-danger:hover{background:#d32f2f}
+.btn-success{background:#4CAF50;color:#fff}.btn-success:hover{background:#388E3C}
+.btn-outline{background:transparent;color:#4FC3F7;border:1px solid #4FC3F7}.btn-outline:hover{background:#4FC3F720}
 .btn-excel{color:#4CAF50;border-color:#4CAF50}.btn-excel:hover{background:#4CAF5020}
 .toolbar .search{flex:1;min-width:200px;padding:8px 14px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.85rem}
 .toolbar .search::placeholder{color:#556677}
@@ -53,7 +47,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e
 .container{max-width:1400px;margin:0 auto;padding:16px}
 
 /* CARDS */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
 .card{background:#1a2940;border-radius:10px;padding:16px;text-align:center;border-left:4px solid;transition:transform .2s}
 .card:hover{transform:translateY(-2px);cursor:pointer}
 .card .number{font-size:2.4rem;font-weight:700;line-height:1.1}
@@ -71,6 +65,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e
 .card.afastado{border-color:#f44336}.card.afastado .number{color:#f44336}
 .card.ferias{border-color:#00BCD4}.card.ferias .number{color:#00BCD4}
 .card.oper{border-color:#00BCD4}.card.oper .number{color:#00BCD4}
+.card.abono-card{border-color:#FFC107}.card.abono-card .number{color:#FFC107}
 
 /* MOBILE CHARTS */
 .mobile-chart-alt{display:none}
@@ -109,7 +104,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e
 .chart-box h3{font-size:.85rem;color:#4FC3F7;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
 .chart-wrap{position:relative;width:100%;max-height:320px}
 
-/* GRADUATION BARS */
+/* GRAD BARS */
 .grad-section{margin-bottom:20px}
 .grad-section h3{font-size:.85rem;color:#4FC3F7;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
 .grad-bar{background:#1a2940;border-radius:8px;margin-bottom:6px;overflow:hidden;transition:all .3s}
@@ -124,68 +119,96 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e
 .grad-bar-meter{flex:1;height:8px;background:#0d1b2a;border-radius:4px;margin:0 16px;overflow:hidden;min-width:80px}
 .grad-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
 .grad-bar-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
-.grad-bar-body.open{max-height:2000px}
+.grad-bar-body.open{max-height:3000px}
 .grad-bar-list{padding:4px 16px 12px 48px}
 .grad-bar-list table{width:100%;border-collapse:collapse;font-size:.76rem}
 .grad-bar-list th{color:#4FC3F7;text-align:left;padding:6px 8px;font-weight:600;border-bottom:1px solid #1e3450}
-.grad-bar-list td{padding:5px 8px;border-bottom:1px solid #0d1b2a}
+.grad-bar-list td{padding:5px 8px;border-bottom:1px solid #0d1b2a;vertical-align:middle}
 .grad-bar-list tr:hover{background:#1e345040}
 .grad-bar-list .btn{padding:2px 8px;font-size:.68rem}
 .grad-bar-list .cb{width:14px;height:14px;cursor:pointer;accent-color:#2196F3}
 .grad-bar-total{display:flex;align-items:center;gap:8px;padding:8px 16px 4px 48px;font-size:.75rem;color:#667788}
 .grad-bar-total span{color:#4FC3F7;font-weight:600}
+
+/* Grad bar color themes */
 .grad-of .grad-bar-fill{background:linear-gradient(90deg,#FF9800,#FF5722)}
+.grad-of .grad-bar-header.active{border-color:#FF9800}
 .grad-pr .grad-bar-fill{background:linear-gradient(90deg,#2196F3,#1565C0)}
-.oficiais-title{color:#FF9800 !important}
-.pracas-title{color:#2196F3 !important}
-.grad-section-pracas{border-top:2px solid #2196F340;padding-top:12px}
-.grad-section-ferias{border-top:2px solid #00BCD440;padding-top:12px}
-.ferias-title{color:#00BCD4 !important}
+.grad-tr .grad-bar-fill{background:linear-gradient(90deg,#2196F3,#1565C0)}
+.grad-tr .grad-bar-count{background:#2196F320;color:#2196F3}
+.grad-tr .grad-bar-header.active{border-color:#2196F3}
+.grad-co .grad-bar-fill{background:linear-gradient(90deg,#78909C,#546E7A)}
+.grad-co .grad-bar-count{background:#78909C20;color:#78909C}
+.grad-co .grad-bar-header.active{border-color:#78909C}
+.grad-ccsv .grad-bar-fill{background:linear-gradient(90deg,#26C6DA,#0097A7)}
+.grad-ccsv .grad-bar-count{background:#26C6DA20;color:#26C6DA}
+.grad-ccsv .grad-bar-header.active{border-color:#26C6DA}
+.grad-abono .grad-bar-fill{background:linear-gradient(90deg,#FFC107,#FF8F00)}
+.grad-abono .grad-bar-count{background:#FFC10720;color:#FFC107}
+.grad-abono .grad-bar-header.active{border-color:#FFC107}
 .grad-fe .grad-bar-fill{background:linear-gradient(90deg,#00BCD4,#0097A7)}
 .grad-fe .grad-bar-count{background:#00BCD420;color:#00BCD4}
-.grad-section-aptob{border-top:2px solid #FF980040;padding-top:12px}
-.aptob-title{color:#FF9800 !important}
 .grad-aptob .grad-bar-fill{background:linear-gradient(90deg,#FF9800,#F57C00)}
 .grad-aptob .grad-bar-count{background:#FF980020;color:#FF9800}
-
-.grad-section-aptoc{border-top:2px solid #FF572240;padding-top:12px}
-.aptoc-title{color:#FF5722 !important}
 .grad-aptoc .grad-bar-fill{background:linear-gradient(90deg,#FF5722,#E64A19)}
 .grad-aptoc .grad-bar-count{background:#FF572220;color:#FF5722}
-
-.grad-section-lts{border-top:2px solid #f4433640;padding-top:12px}
-.lts-title{color:#f44336 !important}
 .grad-lts .grad-bar-fill{background:linear-gradient(90deg,#f44336,#c62828)}
 .grad-lts .grad-bar-count{background:#f4433620;color:#f44336}
-
-.grad-section-agrr{border-top:2px solid #7B1FA240;padding-top:12px}
-.agrr-title{color:#AB47BC !important}
 .grad-agrr .grad-bar-fill{background:linear-gradient(90deg,#AB47BC,#7B1FA2)}
 .grad-agrr .grad-bar-count{background:#AB47BC20;color:#AB47BC}
-
-.grad-section-reforma{border-top:2px solid #79554840;padding-top:12px}
-.reforma-title{color:#A1887F !important}
 .grad-reforma .grad-bar-fill{background:linear-gradient(90deg,#A1887F,#795548)}
 .grad-reforma .grad-bar-count{background:#79554820;color:#A1887F}
-.grad-section-tc{border-top:2px solid #8D6E6340;padding-top:12px}
-.tc-title{color:#8D6E63 !important}
 .grad-tc .grad-bar-fill{background:linear-gradient(90deg,#8D6E63,#6D4C41)}
 .grad-tc .grad-bar-count{background:#8D6E6320;color:#8D6E63}
 
-@media(max-width:600px){.grad-bar-meter{display:none}.grad-bar-rank{min-width:80px;font-size:.8rem}}
+/* Section border separators */
+.grad-section-tropa{border-top:2px solid #2196F340;padding-top:12px}
+.tropa-title{color:#2196F3 !important}
+.grad-section-ciaoutros{border-top:2px solid #78909C40;padding-top:12px}
+.ciaoutros-title{color:#78909C !important}
+.grad-section-ccsv{border-top:2px solid #26C6DA40;padding-top:12px}
+.ccsv-title{color:#26C6DA !important}
+.grad-section-abono{border-top:2px solid #FFC10740;padding-top:12px}
+.abono-title{color:#FFC107 !important}
+.grad-section-ferias{border-top:2px solid #00BCD440;padding-top:12px}
+.ferias-title{color:#00BCD4 !important}
+.grad-section-aptob{border-top:2px solid #FF980040;padding-top:12px}
+.aptob-title{color:#FF9800 !important}
+.grad-section-aptoc{border-top:2px solid #FF572240;padding-top:12px}
+.aptoc-title{color:#FF5722 !important}
+.grad-section-lts{border-top:2px solid #f4433640;padding-top:12px}
+.lts-title{color:#f44336 !important}
+.grad-section-agrr{border-top:2px solid #7B1FA240;padding-top:12px}
+.agrr-title{color:#AB47BC !important}
+.grad-section-reforma{border-top:2px solid #79554840;padding-top:12px}
+.reforma-title{color:#A1887F !important}
+.grad-section-tc{border-top:2px solid #8D6E6340;padding-top:12px}
+.tc-title{color:#8D6E63 !important}
 
-/* TABLE BASE */
+/* Sub-section dividers (CIA vs CCSV within status sections) */
+.subsec-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;padding:5px 14px;margin:10px 0 4px;border-left:4px solid;border-radius:0 4px 4px 0;background:#0d1b2a50;display:inline-block}
+
+/* TABLE */
 table{width:100%;border-collapse:collapse;font-size:.78rem}
 thead th{background:#0d1b2a;color:#4FC3F7;padding:8px 10px;text-align:left;font-weight:600;position:sticky;top:0}
 tbody td{padding:6px 10px;border-bottom:1px solid #1e3450}
 tbody tr:hover{background:#1e3450}
 
+/* FOTO */
+.foto-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid #2a3d55;background:#0d1b2a;flex-shrink:0;display:block}
+.foto-preview-modal{width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #2196F3;flex-shrink:0;background:#0d1b2a;display:block}
+.foto-upload-wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.foto-upload-btns{display:flex;flex-direction:column;gap:8px}
+.foto-upload-btns small{color:#667788;font-size:.7rem}
+
+/* TAGS */
 .tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.68rem;font-weight:600}
 .tag-green{background:#4CAF5020;color:#4CAF50}
 .tag-yellow{background:#FF980020;color:#FF9800}
 .tag-red{background:#f4433620;color:#f44336}
 .tag-blue{background:#2196F320;color:#2196F3}
 .tag-purple{background:#9C27B020;color:#9C27B0}
+.tag-abono{background:#FFC10720;color:#FFC107;font-size:.6rem;padding:1px 5px;border-radius:3px;vertical-align:middle;margin-left:4px}
 
 .cb{width:16px;height:16px;cursor:pointer;accent-color:#2196F3}
 
@@ -241,13 +264,14 @@ body.view-mode .edit-only{display:none !important}
   .grad-bar-rank{font-size:.8rem;min-width:80px}
   .grad-bar-meter{display:none}
   .grad-bar-list{padding:4px 4px 10px 4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .grad-bar-list table{font-size:.68rem;min-width:500px}
+  .grad-bar-list table{font-size:.68rem;min-width:520px}
   .grad-bar-list th,.grad-bar-list td{padding:4px 4px;white-space:nowrap}
   .grad-bar-list .btn{padding:2px 5px;font-size:.6rem}
   .modal{width:95%;padding:16px;max-height:85vh}
   .modal h2{font-size:.95rem}
   #shareOverlay .modal{max-width:95%}
   .modo-badge{font-size:.6rem;padding:3px 8px;display:block;margin:4px 0 0 0}
+  .foto-avatar{width:28px;height:28px}
 }
 </style>
 </head>
@@ -274,6 +298,7 @@ body.view-mode .edit-only{display:none !important}
 
 <div class="container">
   <div class="cards" id="cardsContainer"></div>
+
   <div class="charts">
     <div class="chart-box"><h3>Distribuição por Posto/Graduação</h3><div class="chart-wrap desktop-only"><canvas id="chartPatente"></canvas></div><div id="mobilePatente" class="mobile-chart-alt"></div></div>
     <div class="chart-box"><h3>Situação do Efetivo por Categoria</h3><div class="chart-wrap desktop-only"><canvas id="chartSetor"></canvas></div><div id="mobileCat" class="mobile-chart-alt"></div></div>
@@ -285,16 +310,34 @@ body.view-mode .edit-only{display:none !important}
   <div class="charts mobile-setor-section">
     <div class="chart-box" style="grid-column:1/-1"><h3>Distribuição por Setor e Categoria</h3><div id="mobileSetorBars" class="mobile-setor-bars"></div></div>
   </div>
+
+  <!-- ===== SEÇÕES DE GRUPO (mostram todos os status do grupo) ===== -->
   <div id="secOficiais" class="grad-section grad-section-oficiais">
     <h3 class="oficiais-title">Oficiais <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
     <div id="gradBarsOficiais"></div>
   </div>
 
-  <div id="secPracas" class="grad-section grad-section-pracas">
-    <h3 class="pracas-title">Praças <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
-    <div id="gradBarsPracas"></div>
+  <div id="secTropa" class="grad-section grad-section-tropa">
+    <h3 class="tropa-title">CIA — Tropa <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsTropa"></div>
   </div>
 
+  <div id="secCiaOutros" class="grad-section grad-section-ciaoutros">
+    <h3 class="ciaoutros-title">CIA — Outros Setores <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsCiaOutros"></div>
+  </div>
+
+  <div id="secCCSV" class="grad-section grad-section-ccsv">
+    <h3 class="ccsv-title">CCSV <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsCCSV"></div>
+  </div>
+
+  <div id="secAbono" class="grad-section grad-section-abono">
+    <h3 class="abono-title">Abono Permanência <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <div id="gradBarsAbono"></div>
+  </div>
+
+  <!-- ===== SEÇÕES DE STATUS (podem conter membros de qualquer grupo) ===== -->
   <div id="secFerias" class="grad-section grad-section-ferias">
     <h3 class="ferias-title">De Férias <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
     <div id="gradBarsFerias"></div>
@@ -326,10 +369,9 @@ body.view-mode .edit-only{display:none !important}
   </div>
 
   <div id="secTC" class="grad-section grad-section-tc">
-    <h3 class="tc-title">Tempo Certo <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+    <h3 class="tc-title">Tempo Certo <span style="font-size:.7rem;color:#8D6E63;font-weight:400">— excluído do efetivo total — clique para expandir</span></h3>
     <div id="gradBarsTC"></div>
   </div>
-
 </div>
 
 <!-- MODAL ADD/EDIT -->
@@ -393,9 +435,25 @@ body.view-mode .edit-only{display:none !important}
         <label>Data Fim Afastamento</label>
         <input type="date" id="fAte">
       </div>
+      <div class="form-group">
+        <label>Em Abono Desde</label>
+        <input type="date" id="fAbono" placeholder="Data de início do abono">
+      </div>
       <div class="form-group full">
         <label>Observação</label>
         <textarea id="fObs" rows="2" placeholder="Observações adicionais..."></textarea>
+      </div>
+      <div class="form-group full edit-only">
+        <label>Foto do Militar</label>
+        <div class="foto-upload-wrap">
+          <img id="fotoPreview" class="foto-preview-modal" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 110 110'%3E%3Ccircle cx='55' cy='55' r='55' fill='%231e3450'/%3E%3Ccircle cx='55' cy='42' r='18' fill='%23445566'/%3E%3Cellipse cx='55' cy='90' rx='30' ry='22' fill='%23445566'/%3E%3C/svg%3E" alt="Foto">
+          <div class="foto-upload-btns">
+            <input type="file" id="fFoto" accept="image/*" style="display:none" onchange="previewFoto(this)">
+            <button type="button" class="btn btn-outline" onclick="document.getElementById('fFoto').click()">📷 Selecionar Foto</button>
+            <button type="button" class="btn btn-danger" id="btnRemoverFoto" onclick="removerFoto()" style="display:none">🗑 Remover Foto</button>
+            <small>Foto comprimida automaticamente (máx. 200×200px)</small>
+          </div>
+        </div>
       </div>
     </div>
     <div class="form-actions">
@@ -433,90 +491,173 @@ body.view-mode .edit-only{display:none !important}
 <div class="toast" id="toast"></div>
 
 <script>
-const STORAGE_KEY = 'bepe_efetivo_data';
-let efetivo = [];
-let editingIdx = -1;
-const params = new URLSearchParams(window.location.search);
+// ─── CONSTANTES ─────────────────────────────────────────────────────────────
+const STORAGE_KEY      = 'bepe_efetivo_data';
+const DATA_VERSION_KEY = 'bepe_efetivo_version';
+const PLACEHOLDER_SVG  = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%231e3450'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%23445566'/%3E%3Cellipse cx='20' cy='34' rx='12' ry='9' fill='%23445566'/%3E%3C/svg%3E";
+
+const OFICIAIS_KW      = ['TEN CEL','MAJ','CAP','1 TEN','2 TEN','ASP OF'];
+const EXCLUIR_TROPA_FN = ['GUARDA','VISIBILIDADE','ADJ. FISCAL DE DIA','ADJ FISCAL DE DIA','FISCAL DE DIA','TROPA / P4'];
+const EXCLUIR_TROPA_RG = ['60641'];
+const GRAD_ORDER       = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
+const ORDEM_PATENTE    = {'TEN CEL PM':1,'MAJ PM':2,'CAP PM':3,'1 TEN PM':4,'1TEN PM':4,'2 TEN PM':5,'2TEN PM':5,'ASP OF PM':6,'SUBTEN PM':7,'SUB TEN PM':7,'1 SGT PM':8,'1SGT PM':8,'2 SGT PM':9,'2SGT PM':9,'3 SGT PM':10,'3SGT PM':10,'CB PM':11,'SD PM':12};
+
+// ─── ESTADO ─────────────────────────────────────────────────────────────────
+let efetivo        = [];
+let editingIdx     = -1;
+let firebaseReady  = false;
+let savingToFB     = false;
+let fotosCache     = {};
+let _currentFoto   = null; // base64 da foto selecionada no modal
+let _removendoFoto = false;
+
+const params  = new URLSearchParams(window.location.search);
 const isAdmin = params.get('acesso') === 'admin';
 
+// ─── INICIALIZAÇÃO ──────────────────────────────────────────────────────────
 if (!isAdmin) document.body.classList.add('view-mode');
 document.getElementById('modoBadge').innerHTML = isAdmin
   ? '<span class="modo-badge modo-admin">ADMIN</span> <span id="syncBadge" class="modo-badge" style="background:#FF9800;font-size:.6rem;padding:2px 8px;border-radius:10px;color:#fff">⏳ CONECTANDO...</span>'
   : '<span class="modo-badge modo-view">SOMENTE VISUALIZAÇÃO</span> <span id="syncBadge" class="modo-badge" style="background:#FF9800;font-size:.6rem;padding:2px 8px;border-radius:10px;color:#fff">⏳ CONECTANDO...</span>';
 
-// Monitor Firebase connection
-db.ref('.info/connected').on('value', (snap) => {
+db.ref('.info/connected').on('value', snap => {
   const badge = document.getElementById('syncBadge');
-  if (snap.val() === true) {
-    badge.style.background = '#4CAF50';
-    badge.textContent = '🟢 ONLINE';
-  } else {
-    badge.style.background = '#f44336';
-    badge.textContent = '🔴 OFFLINE';
-  }
+  if (snap.val() === true) { badge.style.background = '#4CAF50'; badge.textContent = '🟢 ONLINE'; }
+  else                     { badge.style.background = '#f44336'; badge.textContent = '🔴 OFFLINE'; }
 });
-const ORDEM_PATENTE = {'TEN CEL PM':1,'MAJ PM':2,'CAP PM':3,'1 TEN PM':4,'1TEN PM':4,'2 TEN PM':5,'2TEN PM':5,'ASP OF PM':6,'SUBTEN PM':7,'SUB TEN PM':7,'1 SGT PM':8,'1SGT PM':8,'2 SGT PM':9,'2SGT PM':9,'3 SGT PM':10,'3SGT PM':10,'CB PM':11,'SD PM':12};
-let chartPatente = null;
-let chartSetor = null;
-let chartCCSV = null;
-let chartCIA = null;
 
-// DADOS_ORIGINAIS loaded from efetivo_data.js
-const DATA_VERSION_KEY = 'bepe_efetivo_version';
-let firebaseReady = false;
-let savingToFirebase = false;
+// ─── FUNÇÕES DE GRUPO ────────────────────────────────────────────────────────
+function isOficial(m)    { return OFICIAIS_KW.some(k => (m.gh||'').toUpperCase().includes(k)); }
+function isTropaGrupo(m) {
+  return m.cia === 'CIA' && !isOficial(m)
+    && !EXCLUIR_TROPA_FN.some(e => (m.funcao||'').toUpperCase().includes(e))
+    && !EXCLUIR_TROPA_RG.includes((m.rg||'').trim());
+}
+function isCiaOutros(m) {
+  return m.cia === 'CIA' && !isOficial(m)
+    && (EXCLUIR_TROPA_FN.some(e => (m.funcao||'').toUpperCase().includes(e))
+        || EXCLUIR_TROPA_RG.includes((m.rg||'').trim()));
+}
+function isCCSV(m) { return m.cia === 'CCSV'; }
 
+// ─── CATEGORIA ───────────────────────────────────────────────────────────────
+function getCategoria(m) {
+  const f = (m.funcao||'').toUpperCase();
+  if (f.includes('FÉRIAS') || f.includes('FERIAS')) return 'ferias';
+  const s = (m.sit||'').toUpperCase();
+  if (s === 'APTO CAT B') return 'aptob';
+  if (s === 'APTO CAT C') return 'aptoc';
+  if (s.includes('LTS'))        return 'lts';
+  if (s.includes('AGUARDANDO')) return 'agrr';
+  if (s.includes('REFORMA'))    return 'reforma';
+  if (m.de === 'TEMPO' && m.ate === 'CERTO') return 'tempocerto';
+  return 'oper';
+}
+
+// ─── FOTOS ────────────────────────────────────────────────────────────────────
+function fotoKey(rg) { return ('rg_' + (rg||'sem_rg')).replace(/[.#$[\]/]/g, '_'); }
+
+function loadFotosVisiveis(container) {
+  container.querySelectorAll('.foto-row').forEach(img => {
+    const rg = img.dataset.rg;
+    if (!rg) return;
+    const key = fotoKey(rg);
+    if (fotosCache[key]) {
+      img.src = fotosCache[key];
+    } else {
+      fotosRef.child(key).once('value', snap => {
+        const val = snap.val();
+        if (val) {
+          fotosCache[key] = val;
+          document.querySelectorAll(`.foto-row[data-rg="${rg}"]`).forEach(i => { i.src = val; });
+        }
+      });
+    }
+  });
+}
+
+function previewFoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 200;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+      else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      _currentFoto = canvas.toDataURL('image/jpeg', 0.78);
+      _removendoFoto = false;
+      const prev = document.getElementById('fotoPreview');
+      prev.src = _currentFoto;
+      document.getElementById('btnRemoverFoto').style.display = 'flex';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function removerFoto() {
+  _currentFoto   = null;
+  _removendoFoto = true;
+  const prev = document.getElementById('fotoPreview');
+  prev.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 110 110'%3E%3Ccircle cx='55' cy='55' r='55' fill='%231e3450'/%3E%3Ccircle cx='55' cy='42' r='18' fill='%23445566'/%3E%3Cellipse cx='55' cy='90' rx='30' ry='22' fill='%23445566'/%3E%3C/svg%3E";
+  document.getElementById('btnRemoverFoto').style.display = 'none';
+  document.getElementById('fFoto').value = '';
+}
+
+function saveFoto(rg, base64) {
+  const key = fotoKey(rg);
+  fotosCache[key] = base64;
+  return fotosRef.child(key).set(base64);
+}
+
+function deleteFoto(rg) {
+  const key = fotoKey(rg);
+  delete fotosCache[key];
+  document.querySelectorAll(`.foto-row[data-rg="${rg}"]`).forEach(i => { i.src = PLACEHOLDER_SVG; });
+  return fotosRef.child(key).remove();
+}
+
+// ─── DADOS ────────────────────────────────────────────────────────────────────
 function loadData() {
-  // Load from localStorage as fast initial render
   const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
   const currentVersion = String(DADOS_ORIGINAIS.length);
   const saved = localStorage.getItem(STORAGE_KEY);
-
   if (saved && savedVersion === currentVersion) {
-    try { efetivo = JSON.parse(saved); } catch(e) {
-      efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
-    }
+    try { efetivo = JSON.parse(saved); } catch(e) { efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS)); }
   } else {
     efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
     localStorage.setItem(DATA_VERSION_KEY, currentVersion);
   }
 
-  // Listen to Firebase for real-time sync
-  efetivoRef.on('value', (snapshot) => {
+  efetivoRef.on('value', snapshot => {
     const data = snapshot.val();
     if (data) {
-      // Firebase has data — convert object to array, filtering invalid entries
       let arr = Array.isArray(data) ? data : Object.values(data);
       arr = arr.filter(m => m && typeof m === 'object' && m.nome && m.funcao && m.sit);
       if (arr.length > 0) {
-        // Only update if data actually changed
         const newJSON = JSON.stringify(arr);
-        const curJSON = JSON.stringify(efetivo);
-        if (newJSON !== curJSON) {
+        if (newJSON !== JSON.stringify(efetivo)) {
           efetivo = arr;
           localStorage.setItem(STORAGE_KEY, newJSON);
           localStorage.setItem(DATA_VERSION_KEY, currentVersion);
           refreshAll();
           showToast('🔄 Dados atualizados em tempo real!', 'info');
-          console.log('🔄 Firebase sync: ' + efetivo.length + ' registros');
         }
         firebaseReady = true;
       }
     } else {
-      // Firebase empty — push initial data
-      console.log('📤 Firebase vazio, enviando dados iniciais...');
       firebaseReady = true;
       efetivoRef.set(efetivo).then(() => {
-        console.log('✅ Dados iniciais enviados ao Firebase');
         showToast('✅ Dados enviados ao Firebase', 'success');
-      }).catch(err => {
-        console.error('❌ Erro ao enviar dados iniciais:', err);
-        showToast('❌ Erro Firebase: ' + err.message, 'danger');
-      });
+      }).catch(err => showToast('❌ Erro Firebase: ' + err.message, 'error'));
     }
-  }, (err) => {
-    console.error('❌ Erro no listener Firebase:', err);
-    showToast('❌ Erro conexão Firebase: ' + err.message, 'danger');
+  }, err => {
+    showToast('❌ Erro conexão Firebase: ' + err.message, 'error');
     const badge = document.getElementById('syncBadge');
     if (badge) { badge.style.background = '#f44336'; badge.textContent = '❌ ERRO'; }
   });
@@ -524,191 +665,178 @@ function loadData() {
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(efetivo));
-  // Sync to Firebase
-  if (isAdmin && !savingToFirebase) {
-    savingToFirebase = true;
-    efetivoRef.set(efetivo).then(() => {
-      savingToFirebase = false;
-      console.log('✅ Dados salvos no Firebase');
-    }).catch((err) => {
-      savingToFirebase = false;
-      console.error('❌ Erro ao salvar no Firebase:', err);
-      showToast('❌ Erro ao salvar: ' + err.message, 'danger');
-    });
+  if (isAdmin && !savingToFB) {
+    savingToFB = true;
+    efetivoRef.set(efetivo).then(() => { savingToFB = false; })
+      .catch(err => { savingToFB = false; showToast('❌ Erro ao salvar: ' + err.message, 'error'); });
   }
 }
 
+// ─── MÉTRICAS ─────────────────────────────────────────────────────────────────
 function calcMetrics() {
-  const t = efetivo.length;
-  const cats = {oper:0, ferias:0, aptob:0, aptoc:0, lts:0, agrr:0, reforma:0, tempocerto:0};
-  efetivo.forEach(m => { cats[getCategoria(m)]++; });
-  const aptoA = cats.oper;
-  const tc = cats.tempocerto;
-  const aptoB = cats.aptob;
-  const aptoC = cats.aptoc;
-  const lts = cats.lts;
-  const rr = cats.agrr;
-  const reforma = cats.reforma;
-  const fer = cats.ferias;
-  const afst = lts + rr + reforma + aptoC;
-  const armaSim = efetivo.filter(m => m.arma === 'SIM').length;
-  const coleteSim = efetivo.filter(m => m.colete === 'SIM').length;
-  const oficiais_kw = ['TEN CEL','MAJ','CAP','1 TEN','2 TEN','ASP OF'];
-  const of = efetivo.filter(m => oficiais_kw.some(k => m.gh.toUpperCase().includes(k))).length;
-  const ofAtivos = efetivo.filter(m => oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && getCategoria(m) !== 'tempocerto').length;
-  const pr = t - of;
-  const oper = t > 0 ? (aptoA / t * 100).toFixed(1) : '0.0';
-  const excluirTropa = ['GUARDA','VISIBILIDADE','ADJ. FISCAL DE DIA','ADJ FISCAL DE DIA','FISCAL DE DIA','TROPA / P4'];
-  const excluirRG = ['60641'];
-  const aptoATropa = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CIA' && !oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && !excluirTropa.some(e => m.funcao.toUpperCase().includes(e)) && !excluirRG.includes(m.rg.trim())).length;
-  const aptoACCSV = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CCSV').length;
-  const aptoAOutros = efetivo.filter(m => getCategoria(m) === 'oper' && m.cia === 'CIA' && !oficiais_kw.some(k => m.gh.toUpperCase().includes(k)) && (excluirTropa.some(e => m.funcao.toUpperCase().includes(e)) || excluirRG.includes(m.rg.trim()))).length;
-  const aptoAOf = efetivo.filter(m => getCategoria(m) === 'oper' && oficiais_kw.some(k => m.gh.toUpperCase().includes(k))).length;
+  const tc      = efetivo.filter(m => getCategoria(m) === 'tempocerto').length;
+  const t       = efetivo.length - tc;  // efetivo total EXCLUINDO TC
+  const aptoA   = efetivo.filter(m => getCategoria(m) === 'oper').length;
+  const aptoB   = efetivo.filter(m => getCategoria(m) === 'aptob').length;
+  const aptoC   = efetivo.filter(m => getCategoria(m) === 'aptoc').length;
+  const lts     = efetivo.filter(m => getCategoria(m) === 'lts').length;
+  const rr      = efetivo.filter(m => getCategoria(m) === 'agrr').length;
+  const reforma = efetivo.filter(m => getCategoria(m) === 'reforma').length;
+  const fer     = efetivo.filter(m => getCategoria(m) === 'ferias').length;
+  const abono   = efetivo.filter(m => m.abono && m.abono.trim()).length;
+
+  const ofAtivos   = efetivo.filter(m => isOficial(m) && getCategoria(m) !== 'tempocerto').length;
+  const pr         = t - ofAtivos;
+  const aptoATropa = efetivo.filter(m => isTropaGrupo(m) && getCategoria(m) === 'oper').length;
+  const aptoACCSV  = efetivo.filter(m => isCCSV(m) && getCategoria(m) === 'oper').length;
+  const aptoAOutros= efetivo.filter(m => isCiaOutros(m) && getCategoria(m) === 'oper').length;
+  const oper       = t > 0 ? (aptoA / t * 100).toFixed(1) : '0.0';
 
   const patentes = {};
-  efetivo.forEach(m => { patentes[m.gh] = (patentes[m.gh] || 0) + 1; });
-
+  efetivo.forEach(m => { if (getCategoria(m) !== 'tempocerto') patentes[m.gh] = (patentes[m.gh] || 0) + 1; });
   const setores = {};
   efetivo.forEach(m => { setores[m.cia] = (setores[m.cia] || 0) + 1; });
 
-  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOf, aptoAOutros, aptoB, aptoC, lts, rr, reforma, fer, tc, afst, armaSim, coleteSim, of, ofAtivos, pr, oper, patentes, setores };
+  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOutros, aptoB, aptoC, lts, rr, reforma, fer, tc, abono, ofAtivos, pr, oper, patentes, setores };
 }
 
-function irPara(id) {
-  const el = document.getElementById(id);
-  const y = el.getBoundingClientRect().top + window.scrollY - 80;
-  window.scrollTo({top: y, behavior: 'smooth'});
-}
-
+// ─── CARDS ────────────────────────────────────────────────────────────────────
 function renderCards(m) {
   document.getElementById('cardsContainer').innerHTML = `
-    <div class="card total" onclick="irPara('secOficiais')"><div class="number">${m.t}</div><div class="label">Efetivo Total</div><div class="sub">${m.of} Oficiais · ${m.pr} Praças</div></div>
-    <div class="card oficiais-card" onclick="irPara('secOficiais')"><div class="number">${m.ofAtivos}</div><div class="label">Oficiais</div><div class="sub">Comando e gestão</div></div>
-    <div class="card tropa" onclick="irPara('secPracas')"><div class="number">${m.aptoATropa}</div><div class="label">Apto A Tropa</div><div class="sub">Somente tropa CIA</div></div>
-    <div class="card cia-outros" onclick="irPara('secPracas')"><div class="number">${m.aptoAOutros}</div><div class="label">CIA Outros</div><div class="sub">Guarda · Visib. · Adj. FD</div></div>
-    <div class="card ccsv-card" onclick="irPara('secPracas')"><div class="number">${m.aptoACCSV}</div><div class="label">CCSV Apto A</div><div class="sub">Apoio administrativo</div></div>
-    <div class="card restrito" onclick="irPara('secAptoB')"><div class="number">${m.aptoB}</div><div class="label">Apto Cat B</div><div class="sub">Restritos</div></div>
-    <div class="card restrito-c" onclick="irPara('secAptoC')"><div class="number">${m.aptoC}</div><div class="label">Apto Cat C</div><div class="sub">Restritos</div></div>
-    <div class="card afastado" onclick="irPara('secLTS')"><div class="number">${m.lts + m.rr + m.reforma}</div><div class="label">Afastados</div><div class="sub">${m.lts} LTS · ${m.rr} Ag.RR · ${m.reforma} Ref.</div></div>
-    <div class="card ferias" onclick="irPara('secFerias')"><div class="number">${m.fer}</div><div class="label">De Férias</div><div class="sub">Em gozo de férias</div></div>
-    <div class="card tc-card" onclick="irPara('secTC')"><div class="number">${m.tc}</div><div class="label">Tempo Certo</div><div class="sub">Aguardando tempo certo</div></div>
-    <div class="card oper" onclick="irPara('secOficiais')"><div class="number">${m.oper}%</div><div class="label">Operacionalidade</div><div class="sub">${m.aptoA} de ${m.t}</div></div>
+    <div class="card total" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+      <div class="number">${m.t}</div><div class="label">Efetivo Total</div>
+      <div class="sub">${m.ofAtivos} Of · ${m.pr} Praças <span style="color:#8D6E63;font-size:.65rem">(TC: ${m.tc})</span></div>
+    </div>
+    <div class="card oficiais-card" onclick="irPara('secOficiais')">
+      <div class="number">${m.ofAtivos}</div><div class="label">Oficiais</div><div class="sub">Comando e gestão</div>
+    </div>
+    <div class="card tropa" onclick="irPara('secTropa')">
+      <div class="number">${m.aptoATropa}</div><div class="label">Apto A Tropa</div><div class="sub">Somente tropa CIA</div>
+    </div>
+    <div class="card cia-outros" onclick="irPara('secCiaOutros')">
+      <div class="number">${m.aptoAOutros}</div><div class="label">CIA Outros</div><div class="sub">Guarda · Visib. · Adj. FD</div>
+    </div>
+    <div class="card ccsv-card" onclick="irPara('secCCSV')">
+      <div class="number">${m.aptoACCSV}</div><div class="label">CCSV Apto A</div><div class="sub">Apoio administrativo</div>
+    </div>
+    <div class="card abono-card" onclick="irPara('secAbono')">
+      <div class="number">${m.abono}</div><div class="label">Abono Permanência</div><div class="sub">Em gozo de abono</div>
+    </div>
+    <div class="card restrito" onclick="irPara('secAptoB')">
+      <div class="number">${m.aptoB}</div><div class="label">Apto Cat B</div><div class="sub">Restritos</div>
+    </div>
+    <div class="card restrito-c" onclick="irPara('secAptoC')">
+      <div class="number">${m.aptoC}</div><div class="label">Apto Cat C</div><div class="sub">Restritos</div>
+    </div>
+    <div class="card afastado" onclick="irPara('secLTS')">
+      <div class="number">${m.lts + m.rr + m.reforma}</div><div class="label">Afastados</div>
+      <div class="sub">${m.lts} LTS · ${m.rr} Ag.RR · ${m.reforma} Ref.</div>
+    </div>
+    <div class="card ferias" onclick="irPara('secFerias')">
+      <div class="number">${m.fer}</div><div class="label">De Férias</div><div class="sub">Em gozo de férias</div>
+    </div>
+    <div class="card tc-card" onclick="irPara('secTC')">
+      <div class="number">${m.tc}</div><div class="label">Tempo Certo</div><div class="sub">Fora da contagem total</div>
+    </div>
+    <div class="card oper">
+      <div class="number">${m.oper}%</div><div class="label">Operacionalidade</div><div class="sub">${m.aptoA} de ${m.t}</div>
+    </div>
   `;
 }
 
+// ─── GRÁFICOS ─────────────────────────────────────────────────────────────────
+let chartPatente = null, chartSetor = null, chartCCSV = null, chartCIA = null;
+
 function renderCharts(m) {
-  const patOrder = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
+  const patOrder  = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
   const patLabels = patOrder.filter(p => m.patentes[p]);
   const patValues = patLabels.map(p => m.patentes[p] || 0);
-  const patColors = patLabels.map((_,i) => {
-    const oficiais = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM'];
-    return oficiais.includes(patLabels[i]) ? '#FF9800' : '#2196F3';
-  });
+  const patColors = patLabels.map(p => OFICIAIS_KW.some(k => p.includes(k)) ? '#FF9800' : '#2196F3');
 
   if (chartPatente) chartPatente.destroy();
   const isMobile = window.innerWidth <= 600;
   chartPatente = new Chart(document.getElementById('chartPatente'), {
-    type:'bar',
-    data:{labels:patLabels,datasets:[{data:patValues,backgroundColor:patColors,borderRadius:4,barThickness: isMobile ? 14 : 18}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,aspectRatio: isMobile ? 1 : 1.5,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#1e3450'},ticks:{color:'#8899aa',font:{size: isMobile ? 9 : 11}}},y:{grid:{display:false},ticks:{color:'#e0e0e0',font:{size: isMobile ? 9 : 11}}}}}
+    type: 'bar',
+    data: { labels: patLabels, datasets: [{ data: patValues, backgroundColor: patColors, borderRadius: 4, barThickness: isMobile ? 14 : 18 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, aspectRatio: isMobile ? 1 : 1.5,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: '#1e3450' }, ticks: { color: '#8899aa', font: { size: isMobile ? 9 : 11 } } },
+                y: { grid: { display: false }, ticks: { color: '#e0e0e0', font: { size: isMobile ? 9 : 11 } } } } }
   });
 
-  const catLabels = [];
-  const catValues = [];
-  const catColors = [];
   const catData = [
-    {label:'Apto A', val:m.aptoA, color:'#4CAF50'},
-    {label:'Apto B', val:m.aptoB, color:'#FF9800'},
-    {label:'Apto C', val:m.aptoC, color:'#FF5722'},
-    {label:'Férias', val:m.fer, color:'#00BCD4'},
-    {label:'LTS', val:m.lts, color:'#f44336'},
-    {label:'Ag. R.R', val:m.rr, color:'#AB47BC'},
-    {label:'Reforma', val:m.reforma, color:'#795548'},
-    {label:'Tempo Certo', val:m.tc, color:'#8D6E63'}
-  ];
-  catData.forEach(c => {
-    if (c.val > 0) { catLabels.push(c.label); catValues.push(c.val); catColors.push(c.color); }
-  });
+    { label: 'Apto A', val: m.aptoA,  color: '#4CAF50', sec: 'secOficiais' },
+    { label: 'Apto B', val: m.aptoB,  color: '#FF9800', sec: 'secAptoB' },
+    { label: 'Apto C', val: m.aptoC,  color: '#FF5722', sec: 'secAptoC' },
+    { label: 'Férias', val: m.fer,    color: '#00BCD4', sec: 'secFerias' },
+    { label: 'LTS',    val: m.lts,    color: '#f44336', sec: 'secLTS' },
+    { label: 'Ag. R.R',val: m.rr,     color: '#AB47BC', sec: 'secAGRR' },
+    { label: 'Reforma',val: m.reforma,color: '#795548', sec: 'secReforma' },
+    { label: 'T. Certo',val: m.tc,    color: '#8D6E63', sec: 'secTC' }
+  ].filter(c => c.val > 0);
+
+  const catLabels = catData.map(c => c.label);
+  const catValues = catData.map(c => c.val);
+  const catColors = catData.map(c => c.color);
+  const catSecs   = Object.fromEntries(catData.map(c => [c.label, c.sec]));
 
   if (chartSetor) chartSetor.destroy();
-  const catSections = {
-    'Apto A':'secOficiais','Apto B':'secAptoB','Apto C':'secAptoC',
-    'Férias':'secFerias','LTS':'secLTS','Ag. R.R':'secAGRR','Reforma':'secReforma','Tempo Certo':'secTC'
-  };
   chartSetor = new Chart(document.getElementById('chartSetor'), {
-    type:'doughnut',
-    data:{labels:catLabels,datasets:[{data:catValues,backgroundColor:catColors,borderColor:'#1a2940',borderWidth:3}]},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio: isMobile ? 1 : 1.5,
-      onClick:(evt, elements) => {
-        if (elements.length > 0) {
-          const label = catLabels[elements[0].index];
-          const secId = catSections[label];
-          if (secId) irPara(secId);
-        }
-      },
-      plugins:{legend:{
-        position:'bottom',
-        onClick:(evt, item, legend) => {
-          const label = item.text;
-          const secId = catSections[label];
-          if (secId) irPara(secId);
-        },
-        labels:{color:'#e0e0e0',padding: isMobile ? 8 : 12,font:{size: isMobile ? 10 : 11},boxWidth: isMobile ? 12 : 40,cursor:'pointer'}
-      }},
+    type: 'doughnut',
+    data: { labels: catLabels, datasets: [{ data: catValues, backgroundColor: catColors, borderColor: '#1a2940', borderWidth: 3 }] },
+    options: { responsive: true, maintainAspectRatio: true, aspectRatio: isMobile ? 1 : 1.5,
+      onClick: (evt, elements) => { if (elements.length > 0) { const s = catSecs[catLabels[elements[0].index]]; if (s) irPara(s); } },
+      plugins: { legend: { position: 'bottom',
+        onClick: (evt, item) => { const s = catSecs[item.text]; if (s) irPara(s); },
+        labels: { color: '#e0e0e0', padding: isMobile ? 8 : 12, font: { size: isMobile ? 10 : 11 }, boxWidth: isMobile ? 12 : 40, cursor: 'pointer' }
+      } }
     }
   });
   document.getElementById('chartSetor').style.cursor = 'pointer';
 
-  // Mobile: barras de progresso para patentes
-  const patHTML = patLabels.map((p,i) => {
+  // Mobile: patentes
+  document.getElementById('mobilePatente').innerHTML = patLabels.map((p, i) => {
     const pct = (patValues[i] / Math.max(...patValues) * 100).toFixed(0);
-    const color = patColors[i];
-    return `<div class="mob-row"><span class="mob-label">${p.replace(' PM','')}</span><div class="mob-bar-bg"><div class="mob-bar-fill" style="width:${pct}%;background:${color}">${patValues[i]>2?patValues[i]:''}</div></div><span class="mob-val" style="color:${color}">${patValues[i]}</span></div>`;
+    return `<div class="mob-row"><span class="mob-label">${p.replace(' PM','')}</span><div class="mob-bar-bg"><div class="mob-bar-fill" style="width:${pct}%;background:${patColors[i]}">${patValues[i]>2?patValues[i]:''}</div></div><span class="mob-val" style="color:${patColors[i]}">${patValues[i]}</span></div>`;
   }).join('');
-  document.getElementById('mobilePatente').innerHTML = patHTML;
 
-  // Mobile: barras de progresso para categorias
-  const catSections2 = {'Apto A':'secOficiais','Apto B':'secAptoB','Apto C':'secAptoC','Férias':'secFerias','LTS':'secLTS','Ag. R.R':'secAGRR','Reforma':'secReforma','Tempo Certo':'secTC'};
-  const catMax = Math.max(...catValues);
-  const catHTML = catLabels.map((c,i) => {
-    const pct = (catValues[i] / m.t * 100).toFixed(1);
-    const barPct = (catValues[i] / catMax * 100).toFixed(0);
-    const secId = catSections2[c] || '';
-    const onclick = secId ? ` onclick="irPara('${secId}')"` : '';
-    return `<div class="mob-cat-bar"${onclick} style="cursor:${secId?'pointer':'default'}">
-      <div class="mob-cat-head"><div class="mob-cat-dot" style="background:${catColors[i]}"></div><span class="mob-cat-name">${c}</span><span class="mob-cat-num" style="color:${catColors[i]}">${catValues[i]} <small style="color:#8899aa;font-weight:400">(${pct}%)</small></span></div>
-      <div class="mob-cat-track"><div class="mob-cat-fill" style="width:${barPct}%;background:${catColors[i]}"></div></div>
+  // Mobile: categorias
+  const catMax = Math.max(...catValues, 1);
+  document.getElementById('mobileCat').innerHTML = catData.map((c, i) => {
+    const pct    = (c.val / m.t * 100).toFixed(1);
+    const barPct = (c.val / catMax * 100).toFixed(0);
+    const sec    = catSecs[c.label] || '';
+    return `<div class="mob-cat-bar" ${sec ? `onclick="irPara('${sec}')"` : ''} style="cursor:${sec?'pointer':'default'}">
+      <div class="mob-cat-head"><div class="mob-cat-dot" style="background:${c.color}"></div><span class="mob-cat-name">${c.label}</span><span class="mob-cat-num" style="color:${c.color}">${c.val} <small style="color:#8899aa;font-weight:400">(${pct}%)</small></span></div>
+      <div class="mob-cat-track"><div class="mob-cat-fill" style="width:${barPct}%;background:${c.color}"></div></div>
     </div>`;
   }).join('');
-  document.getElementById('mobileCat').innerHTML = catHTML;
 }
 
 function renderSetorCharts() {
-  const isMobile = window.innerWidth <= 600;
-  const catKeys = ['oper','aptob','aptoc','ferias','lts','agrr','reforma','tempocerto'];
-  const catNames = {'oper':'Apto A','aptob':'Apto B','aptoc':'Apto C','ferias':'Férias','lts':'LTS','agrr':'Ag. R.R','reforma':'Reforma','tempocerto':'T. Certo'};
-  const catColors = {'oper':'#4CAF50','aptob':'#FF9800','aptoc':'#FF5722','ferias':'#00BCD4','lts':'#f44336','agrr':'#AB47BC','reforma':'#795548','tempocerto':'#8D6E63'};
-  const setores = ['OFICIAIS','CIA','CCSV'];
-  const setorColors = {'OFICIAIS':'#FFD600','CIA':'#2196F3','CCSV':'#26C6DA'};
+  const isMobile  = window.innerWidth <= 600;
+  const catKeys   = ['oper','aptob','aptoc','ferias','lts','agrr','reforma','tempocerto'];
+  const catNames  = {oper:'Apto A',aptob:'Apto B',aptoc:'Apto C',ferias:'Férias',lts:'LTS',agrr:'Ag. R.R',reforma:'Reforma',tempocerto:'T. Certo'};
+  const catColors = {oper:'#4CAF50',aptob:'#FF9800',aptoc:'#FF5722',ferias:'#00BCD4',lts:'#f44336',agrr:'#AB47BC',reforma:'#795548',tempocerto:'#8D6E63'};
+  const setorColors = {OFICIAIS:'#FFD600',CIA:'#2196F3',CCSV:'#26C6DA'};
 
   function buildSetorData(setor) {
     const cats = {};
     efetivo.filter(m => m.cia === setor).forEach(m => { const c = getCategoria(m); cats[c] = (cats[c]||0)+1; });
     const labels = [], values = [], colors = [];
-    catKeys.forEach(k => { if (cats[k] && cats[k] > 0) { labels.push(catNames[k]); values.push(cats[k]); colors.push(catColors[k]); } });
-    return {labels, values, colors, total: efetivo.filter(m => m.cia === setor).length};
+    catKeys.forEach(k => { if (cats[k] > 0) { labels.push(catNames[k]); values.push(cats[k]); colors.push(catColors[k]); } });
+    return { labels, values, colors, total: efetivo.filter(m => m.cia === setor).length };
   }
 
-  // Mobile: barras horizontais empilhadas
   let barsHTML = '';
-  setores.forEach(setor => {
+  ['OFICIAIS','CIA','CCSV'].forEach(setor => {
     const d = buildSetorData(setor);
     if (d.total === 0) return;
     const pctTotal = (d.total / efetivo.length * 100).toFixed(1);
     let segs = '', legend = '';
-    d.labels.forEach((l,i) => {
+    d.labels.forEach((l, i) => {
       const pct = (d.values[i] / d.total * 100);
-      segs += `<div class="setor-bar-seg" style="width:${pct}%;background:${d.colors[i]}">${pct > 8 ? d.values[i] : ''}</div>`;
+      segs   += `<div class="setor-bar-seg" style="width:${pct}%;background:${d.colors[i]}">${pct > 8 ? d.values[i] : ''}</div>`;
       legend += `<div class="setor-bar-legend-item"><div class="dot" style="background:${d.colors[i]}"></div>${l} ${d.values[i]}</div>`;
     });
     barsHTML += `<div class="setor-bar-item"><div class="setor-label" style="color:${setorColors[setor]}">${setor} (${d.total}) <span>${pctTotal}% do total</span></div><div class="setor-bar-track">${segs}</div><div class="setor-bar-legend">${legend}</div></div>`;
@@ -717,279 +845,64 @@ function renderSetorCharts() {
 
   if (isMobile) { if (chartCCSV) { chartCCSV.destroy(); chartCCSV = null; } if (chartCIA) { chartCIA.destroy(); chartCIA = null; } return; }
 
-  // Desktop: 2 pizzas separadas (CCSV e CIA)
   const ccsvData = buildSetorData('CCSV');
   document.getElementById('ccsvTotal').textContent = ccsvData.total;
   if (chartCCSV) chartCCSV.destroy();
   chartCCSV = new Chart(document.getElementById('chartCCSV'), {
-    type:'doughnut',
-    data:{labels:ccsvData.labels,datasets:[{data:ccsvData.values,backgroundColor:ccsvData.colors,borderColor:'#1a2940',borderWidth:3}]},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:1.5,plugins:{legend:{position:'bottom',labels:{color:'#e0e0e0',padding:12,font:{size:11}}}}}
+    type: 'doughnut',
+    data: { labels: ccsvData.labels, datasets: [{ data: ccsvData.values, backgroundColor: ccsvData.colors, borderColor: '#1a2940', borderWidth: 3 }] },
+    options: { responsive: true, maintainAspectRatio: true, aspectRatio: 1.5, plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0', padding: 12, font: { size: 11 } } } } }
   });
 
   const ciaData = buildSetorData('CIA');
   document.getElementById('ciaTotal').textContent = ciaData.total;
   if (chartCIA) chartCIA.destroy();
   chartCIA = new Chart(document.getElementById('chartCIA'), {
-    type:'doughnut',
-    data:{labels:ciaData.labels,datasets:[{data:ciaData.values,backgroundColor:ciaData.colors,borderColor:'#1a2940',borderWidth:3}]},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:1.5,plugins:{legend:{position:'bottom',labels:{color:'#e0e0e0',padding:12,font:{size:11}}}}}
+    type: 'doughnut',
+    data: { labels: ciaData.labels, datasets: [{ data: ciaData.values, backgroundColor: ciaData.colors, borderColor: '#1a2940', borderWidth: 3 }] },
+    options: { responsive: true, maintainAspectRatio: true, aspectRatio: 1.5, plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0', padding: 12, font: { size: 11 } } } } }
   });
 }
 
+// ─── TAGS ─────────────────────────────────────────────────────────────────────
 function sitTag(sit) {
-  const s = sit.toUpperCase();
-  if (s === 'APTO CAT A') return `<span class="tag tag-green">${sit}</span>`;
-  if (s.includes('CAT B')) return `<span class="tag tag-yellow">${sit}</span>`;
-  if (s.includes('CAT C')) return `<span class="tag tag-yellow">${sit}</span>`;
-  if (s.includes('LTS')) return `<span class="tag tag-red">${sit}</span>`;
-  if (s.includes('AGUARDANDO')) return `<span class="tag tag-purple">${sit}</span>`;
+  const s = (sit||'').toUpperCase();
+  if (s === 'APTO CAT A')     return `<span class="tag tag-green">${sit}</span>`;
+  if (s.includes('CAT B'))    return `<span class="tag tag-yellow">${sit}</span>`;
+  if (s.includes('CAT C'))    return `<span class="tag tag-yellow">${sit}</span>`;
+  if (s.includes('LTS'))      return `<span class="tag tag-red">${sit}</span>`;
+  if (s.includes('AGUARDANDO'))return `<span class="tag tag-purple">${sit}</span>`;
   return `<span class="tag tag-blue">${sit}</span>`;
 }
 
-
-function updateSelection() {
-  const checked = document.querySelectorAll('.row-cb:checked');
-  const btn = document.getElementById('btnExcluir');
-  const count = document.getElementById('selCount');
-  if (checked.length > 0) {
-    btn.style.display = 'flex';
-    count.textContent = checked.length;
-  } else {
-    btn.style.display = 'none';
-  }
-}
-
-
-function openAddModal() {
-  editingIdx = -1;
-  document.getElementById('modalTitle').textContent = 'Adicionar Militar';
-  document.getElementById('fGh').value = '';
-  document.getElementById('fRg').value = '';
-  document.getElementById('fNome').value = '';
-  document.getElementById('fCia').value = '';
-  document.getElementById('fFuncao').value = '';
-  document.getElementById('fSit').value = 'APTO CAT A';
-  document.getElementById('fId').value = '';
-  document.getElementById('fArma').value = 'SIM';
-  document.getElementById('fColete').value = 'SIM';
-  document.getElementById('fDe').value = '';
-  document.getElementById('fAte').value = '';
-  document.getElementById('fObs').value = '';
-  document.getElementById('modalOverlay').classList.add('active');
-}
-
-function editarMilitar(idx) {
-  editingIdx = idx;
-  const m = efetivo[idx];
-  document.getElementById('modalTitle').textContent = 'Editar Militar';
-  document.getElementById('fGh').value = m.gh;
-  document.getElementById('fRg').value = m.rg;
-  document.getElementById('fNome').value = m.nome;
-  document.getElementById('fCia').value = m.cia;
-  document.getElementById('fFuncao').value = m.funcao;
-  document.getElementById('fSit').value = m.sit;
-  document.getElementById('fId').value = m.id || '';
-  document.getElementById('fArma').value = m.arma;
-  document.getElementById('fColete').value = m.colete;
-  document.getElementById('fDe').value = m.de;
-  document.getElementById('fAte').value = m.ate;
-  document.getElementById('fObs').value = m.obs;
-  document.getElementById('modalOverlay').classList.add('active');
-}
-
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('active');
-}
-
-function salvarMilitar() {
-  const gh = document.getElementById('fGh').value;
-  const nome = document.getElementById('fNome').value.trim().toUpperCase();
-  const cia = document.getElementById('fCia').value;
-
-  if (!gh || !nome || !cia) {
-    showToast('Preencha os campos obrigatórios: Patente, Nome e Setor', 'error');
-    return;
-  }
-
-  const mil = {
-    gh, nome, cia,
-    rg: document.getElementById('fRg').value.trim(),
-    id: document.getElementById('fId').value.trim(),
-    funcao: document.getElementById('fFuncao').value.trim().toUpperCase(),
-    sit: document.getElementById('fSit').value,
-    arma: document.getElementById('fArma').value,
-    colete: document.getElementById('fColete').value,
-    de: document.getElementById('fDe').value,
-    ate: document.getElementById('fAte').value,
-    obs: document.getElementById('fObs').value.trim(),
-    ferias: ''
+function categoriaTag(m) {
+  const cat = getCategoria(m);
+  const map = {
+    oper: '', ferias: '<span class="tag" style="background:#00BCD420;color:#00BCD4">FÉRIAS</span>',
+    aptob:'<span class="tag tag-yellow">APTO B</span>', aptoc:'<span class="tag tag-yellow">APTO C</span>',
+    lts:  '<span class="tag tag-red">LTS</span>', agrr:'<span class="tag tag-purple">Ag. R.R</span>',
+    reforma:'<span class="tag" style="background:#79554820;color:#A1887F">REFORMA</span>',
+    tempocerto:'<span class="tag" style="background:#8D6E6320;color:#8D6E63">T. CERTO</span>'
   };
-
-  if (editingIdx >= 0) {
-    efetivo[editingIdx] = mil;
-    showToast(`${nome} atualizado com sucesso`, 'success');
-  } else {
-    efetivo.push(mil);
-    showToast(`${nome} adicionado ao efetivo`, 'success');
-  }
-  efetivo.sort((a,b) => {
-    const oa = ORDEM_PATENTE[a.gh.trim().toUpperCase()] || 99;
-    const ob = ORDEM_PATENTE[b.gh.trim().toUpperCase()] || 99;
-    if (oa !== ob) return oa - ob;
-    const ra = parseInt(a.rg) || 999999;
-    const rb = parseInt(b.rg) || 999999;
-    return ra - rb;
-  });
-
-  saveData();
-  closeModal();
-  refreshAll();
+  return map[cat] || '';
 }
 
-function excluirUm(idx) {
-  const nome = efetivo[idx].nome;
-  if (confirm(`Confirma exclusão de ${nome} do efetivo?`)) {
-    efetivo.splice(idx, 1);
-    saveData();
-    showToast(`${nome} excluído do efetivo`, 'info');
-    refreshAll();
-  }
-}
-
-function excluirSelecionados() {
-  const checked = [...document.querySelectorAll('.row-cb:checked')];
-  const idxs = checked.map(cb => parseInt(cb.dataset.idx)).sort((a,b) => b-a);
-  if (confirm(`Confirma exclusão de ${idxs.length} militar(es)?`)) {
-    idxs.forEach(i => efetivo.splice(i, 1));
-    saveData();
-    showToast(`${idxs.length} militar(es) excluído(s)`, 'info');
-    document.getElementById('cbAll').checked = false;
-    refreshAll();
-  }
-}
-
-function resetarDados() {
-  if (confirm('Isso vai restaurar os dados originais da planilha. Todas as alterações serão perdidas. Continuar?')) {
-    efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
-    saveData();
-    showToast('Dados restaurados ao original', 'info');
-    refreshAll();
-  }
-}
-
-function exportarCSV() {
-  const headers = ['Patente','RG','ID Funcional','Nome','Setor','Função','Sit. Sanitária','Arma','Colete','De','Até','Observação'];
-  const rows = efetivo.map(m => [m.gh,m.rg,m.id,m.nome,m.cia,m.funcao,m.sit,m.arma,m.colete,m.de,m.ate,m.obs].map(v => `"${(v||'').replace(/"/g,'""')}"`).join(','));
-  const csv = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `efetivo_bepe_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click(); URL.revokeObjectURL(url);
-  showToast('CSV exportado com sucesso', 'success');
-}
-
-function exportarExcel() {
-  const headers = ['Patente','RG','ID Funcional','Nome','Setor','Função','Sit. Sanitária','Categoria','Arma','Colete','De','Até','Observação'];
-  const data = efetivo.map(m => {
-    const catMap = {oper:'Apto A',ferias:'Férias',aptob:'Apto B',aptoc:'Apto C',lts:'LTS',agrr:'Ag. R.R',reforma:'Reforma',tempocerto:'Tempo Certo'};
-    return [m.gh,m.rg,m.id,m.nome,m.cia,m.funcao,m.sit,catMap[getCategoria(m)]||'',m.arma,m.colete,m.de,m.ate,m.obs];
-  });
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-  const colWidths = [14,12,14,35,12,30,16,14,8,8,10,10,20];
-  ws['!cols'] = colWidths.map(w => ({wch:w}));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Efetivo BEPE');
-  const m = calcMetrics();
-  const resumo = [
-    ['RESUMO DO EFETIVO - BEPE'],
-    [''],
-    ['Categoria','Quantidade'],
-    ['Efetivo Total', m.t],
-    ['Oficiais', m.ofAtivos],
-    ['Apto A Tropa', m.aptoATropa],
-    ['CIA Outros', m.aptoAOutros],
-    ['CCSV Apto A', m.aptoACCSV],
-    ['Apto Cat B', m.aptoB],
-    ['Apto Cat C', m.aptoC],
-    ['Afastados (LTS+Ag.RR+Ref)', m.lts + m.rr + m.reforma],
-    ['De Férias', m.fer],
-    ['Tempo Certo', m.tc],
-    [''],
-    ['Operacionalidade', m.oper + '%'],
-    [''],
-    ['Gerado em', new Date().toLocaleString('pt-BR')]
-  ];
-  const ws2 = XLSX.utils.aoa_to_sheet(resumo);
-  ws2['!cols'] = [{wch:30},{wch:15}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Resumo');
-  XLSX.writeFile(wb, `efetivo_bepe_${new Date().toISOString().slice(0,10)}.xlsx`);
-  showToast('Excel exportado com sucesso', 'success');
-}
-
-function abrirCompartilhar() {
-  const base = window.location.origin.includes('localhost') ? 'https://bruxo2013.github.io/bepe-dashboard/dashboard_efetivo.html' : window.location.origin + window.location.pathname;
-  document.getElementById('linkView').value = base;
-  document.getElementById('linkAdmin').value = base + '?acesso=admin';
-  document.getElementById('shareOverlay').classList.add('active');
-}
-
-function fecharCompartilhar() {
-  document.getElementById('shareOverlay').classList.remove('active');
-}
-
-function copiarLink(inputId) {
-  const input = document.getElementById(inputId);
-  navigator.clipboard.writeText(input.value).then(() => {
-    showToast('Link copiado!', 'success');
-  }).catch(() => {
-    input.select();
-    document.execCommand('copy');
-    showToast('Link copiado!', 'success');
-  });
-}
-
-function showToast(msg, type) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast ' + type + ' show';
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-function getCategoria(m) {
-  const f = m.funcao.toUpperCase();
-  if (f.includes('FÉRIAS') || f.includes('FERIAS')) return 'ferias';
-  const s = m.sit.toUpperCase();
-  if (s === 'APTO CAT B') return 'aptob';
-  if (s === 'APTO CAT C') return 'aptoc';
-  if (s.includes('LTS')) return 'lts';
-  if (s.includes('AGUARDANDO')) return 'agrr';
-  if (s.includes('REFORMA')) return 'reforma';
-  if (m.de === 'TEMPO' && m.ate === 'CERTO') return 'tempocerto';
-  return 'oper';
-}
-
-function hasSearch() {
-  return document.getElementById('searchInput').value.trim().length > 0;
-}
-
-function buildGradHTML(list, grad, cssClass) {
-  const rows = list.map((m,i) => `<tr>
-    ${isAdmin ? `<td><input type="checkbox" class="cb row-cb" data-idx="${m._idx}" onchange="updateSelection()"></td>` : ''}
-    <td style="color:#667788">${i+1}</td>
-    <td>${m.rg}</td>
-    <td style="font-weight:500">${m.nome}</td>
-    <td>${m.cia}</td>
-    <td>${m.funcao}</td>
-    <td>${sitTag(m.sit)}</td>
-    <td>${m.arma === 'SIM' ? '<span class="tag tag-green">SIM</span>' : m.arma === 'NÃO' ? '<span class="tag tag-red">NÃO</span>' : '—'}</td>
-    ${isAdmin ? `<td>
-      <button class="btn btn-outline" onclick="editarMilitar(${m._idx})">Editar</button>
-      <button class="btn btn-danger" onclick="excluirUm(${m._idx})">Excluir</button>
-    </td>` : ''}
-  </tr>`).join('');
+// ─── CONSTRUIR TABELA DE GRADUAÇÃO ───────────────────────────────────────────
+function buildGradHTML(list, grad, cssClass, showStatusCol) {
   const searching = hasSearch();
+  const rows = list.map((m, i) => `<tr>
+    ${isAdmin ? `<td><input type="checkbox" class="cb row-cb" data-idx="${m._idx}" onchange="updateSelection()"></td>` : ''}
+    <td style="padding:4px 6px"><img class="foto-avatar foto-row" data-rg="${(m.rg||'').replace(/"/g,'')}" src="${PLACEHOLDER_SVG}" alt=""></td>
+    <td style="color:#667788">${i+1}</td>
+    <td>${m.rg||'—'}</td>
+    <td style="font-weight:500">${m.nome}${m.abono ? '<span class="tag-abono">ABONO</span>' : ''}</td>
+    <td>${m.cia||'—'}</td>
+    <td>${m.funcao||'—'}</td>
+    <td>${sitTag(m.sit)}${showStatusCol ? ' ' + categoriaTag(m) : ''}</td>
+    <td>${m.arma === 'SIM' ? '<span class="tag tag-green">SIM</span>' : m.arma === 'NÃO' ? '<span class="tag tag-red">NÃO</span>' : '—'}</td>
+    ${isAdmin ? `<td><button class="btn btn-outline" onclick="editarMilitar(${m._idx})">Editar</button> <button class="btn btn-danger" onclick="excluirUm(${m._idx})">Excluir</button></td>` : ''}
+  </tr>`).join('');
+
   return `<div class="grad-bar ${cssClass}">
     <div class="grad-bar-header${searching ? ' active' : ''}" onclick="toggleGrad(this)">
       <div class="grad-bar-left">
@@ -999,71 +912,121 @@ function buildGradHTML(list, grad, cssClass) {
       <div class="grad-bar-meter"><div class="grad-bar-fill" style="width:100%"></div></div>
       <span class="grad-bar-count">${list.length}</span>
     </div>
-    <div class="grad-bar-body${searching ? ' open' : ''}"
+    <div class="grad-bar-body${searching ? ' open' : ''}">
       <div class="grad-bar-list">
-        <table><thead><tr>${isAdmin ? '<th style="width:30px"><input type="checkbox" class="cb grad-cb-all" onchange="toggleGradAll(this)"></th>' : ''}<th>#</th><th>RG</th><th>Nome</th><th>Setor</th><th>Função</th><th>Situação</th><th>Arma</th>${isAdmin ? '<th>Ações</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>
+        <table><thead><tr>
+          ${isAdmin ? '<th style="width:30px"><input type="checkbox" class="cb grad-cb-all" onchange="toggleGradAll(this)"></th>' : ''}
+          <th style="width:42px">Foto</th>
+          <th>#</th><th>RG</th><th>Nome</th><th>Setor</th><th>Função</th><th>Situação</th><th>Arma</th>
+          ${isAdmin ? '<th>Ações</th>' : ''}
+        </tr></thead><tbody>${rows}</tbody></table>
       </div>
     </div>
   </div>`;
 }
 
-function renderGradBars() {
-  const GRAD_ORDER = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
-  const OFICIAIS = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM'];
-  const search = document.getElementById('searchInput').value.toLowerCase();
-
-  const cats = {oper:{},ferias:{},aptob:{},aptoc:{},lts:{},agrr:{},reforma:{},tempocerto:{}};
-  Object.keys(cats).forEach(c => GRAD_ORDER.forEach(g => cats[c][g] = []));
-
-  efetivo.forEach((m, idx) => {
-    if (search && !(m.nome.toLowerCase().includes(search) || m.gh.toLowerCase().includes(search) || m.funcao.toLowerCase().includes(search) || m.cia.toLowerCase().includes(search) || m.rg.toLowerCase().includes(search))) return;
-    const key = GRAD_ORDER.find(g => g === m.gh.trim().toUpperCase()) || m.gh.trim().toUpperCase();
-    const cat = getCategoria(m);
-    if (!cats[cat][key]) cats[cat][key] = [];
-    cats[cat][key].push({...m, _idx: idx});
+// ─── HELPER: agrupar por graduação ───────────────────────────────────────────
+function byGrad(list) {
+  const groups = {};
+  list.forEach(m => {
+    const g = (m.gh||'').trim().toUpperCase();
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(m);
   });
+  return groups;
+}
 
-  Object.values(cats).forEach(g => Object.values(g).forEach(arr => arr.sort((a,b) => (parseInt(a.rg)||999999) - (parseInt(b.rg)||999999))));
-
-  const GRAD_OFICIAIS = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM'];
-  const GRAD_PRACAS = ['SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
-
-  document.getElementById('gradBarsOficiais').innerHTML = GRAD_OFICIAIS.map(grad => {
-    const list = cats.oper[grad];
-    if (!list || list.length === 0) return '';
-    return buildGradHTML(list, grad, 'grad-of');
-  }).join('');
-
-  document.getElementById('gradBarsPracas').innerHTML = GRAD_PRACAS.map(grad => {
-    const list = cats.oper[grad];
-    if (!list || list.length === 0) return '';
-    return buildGradHTML(list, grad, 'grad-pr');
-  }).join('');
-
-  const sections = [
-    {key:'ferias', id:'gradBarsFerias', css:'grad-fe', sec:'.grad-section-ferias'},
-    {key:'aptob', id:'gradBarsAptoB', css:'grad-aptob', sec:'.grad-section-aptob'},
-    {key:'aptoc', id:'gradBarsAptoC', css:'grad-aptoc', sec:'.grad-section-aptoc'},
-    {key:'lts', id:'gradBarsLTS', css:'grad-lts', sec:'.grad-section-lts'},
-    {key:'agrr', id:'gradBarsAGRR', css:'grad-agrr', sec:'.grad-section-agrr'},
-    {key:'reforma', id:'gradBarsReforma', css:'grad-reforma', sec:'.grad-section-reforma'},
-    {key:'tempocerto', id:'gradBarsTC', css:'grad-tc', sec:'.grad-section-tc'}
-  ];
-
-  sections.forEach(s => {
-    const total = Object.values(cats[s.key]).reduce((sum,a) => sum + a.length, 0);
-    document.getElementById(s.id).innerHTML = GRAD_ORDER.map(grad => {
-      const list = cats[s.key][grad];
-      if (!list || list.length === 0) return '';
-      return buildGradHTML(list, grad, s.css);
-    }).join('');
-    document.querySelector(s.sec).style.display = total > 0 ? 'block' : 'none';
+function sortList(list) {
+  return list.slice().sort((a, b) => {
+    const oa = ORDEM_PATENTE[(a.gh||'').trim().toUpperCase()] || 99;
+    const ob = ORDEM_PATENTE[(b.gh||'').trim().toUpperCase()] || 99;
+    if (oa !== ob) return oa - ob;
+    return (parseInt(a.rg)||999999) - (parseInt(b.rg)||999999);
   });
 }
 
+// Renderiza seção de GRUPO (mostra todos os status, exceto TC)
+function renderGrupoSection(containerId, secId, rawList, cssClass) {
+  const sec       = document.getElementById(secId);
+  const container = document.getElementById(containerId);
+  const list      = sortList(rawList);
+  if (list.length === 0) { sec.style.display = 'none'; container.innerHTML = ''; return; }
+  sec.style.display = 'block';
+  const groups = byGrad(list);
+  container.innerHTML = GRAD_ORDER
+    .filter(g => groups[g] && groups[g].length > 0)
+    .map(g => buildGradHTML(groups[g], g, cssClass, true))
+    .join('');
+}
+
+// Renderiza seção de STATUS (separa CIA vs CCSV com sub-label)
+function renderStatusSection(containerId, secId, rawList, cssClass) {
+  const sec       = document.getElementById(secId);
+  const container = document.getElementById(containerId);
+  if (rawList.length === 0) { sec.style.display = 'none'; container.innerHTML = ''; return; }
+  sec.style.display = 'block';
+
+  const listCIA  = sortList(rawList.filter(m => m.cia !== 'CCSV'));
+  const listCCSV = sortList(rawList.filter(m => m.cia === 'CCSV'));
+  const hasBoth  = listCIA.length > 0 && listCCSV.length > 0;
+
+  let html = '';
+
+  if (listCIA.length > 0) {
+    if (hasBoth) html += `<div class="subsec-label" style="color:#2196F3;border-color:#2196F3">CIA / Oficiais (${listCIA.length})</div>`;
+    const groups = byGrad(listCIA);
+    html += GRAD_ORDER.filter(g => groups[g]).map(g => buildGradHTML(groups[g], g, cssClass, false)).join('');
+  }
+
+  if (listCCSV.length > 0) {
+    if (hasBoth) html += `<div class="subsec-label" style="color:#26C6DA;border-color:#26C6DA;margin-top:14px">CCSV (${listCCSV.length})</div>`;
+    const groups = byGrad(listCCSV);
+    html += GRAD_ORDER.filter(g => groups[g]).map(g => buildGradHTML(groups[g], g, cssClass + ' grad-ccsv', false)).join('');
+  }
+
+  container.innerHTML = html;
+}
+
+// ─── RENDERIZAR TODAS AS SEÇÕES ──────────────────────────────────────────────
+function renderGradBars() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+
+  const filtered = efetivo.map((m, idx) => ({ ...m, _idx: idx })).filter(m => {
+    if (!search) return true;
+    return (m.nome||'').toLowerCase().includes(search)
+      || (m.gh||'').toLowerCase().includes(search)
+      || (m.funcao||'').toLowerCase().includes(search)
+      || (m.cia||'').toLowerCase().includes(search)
+      || (m.rg||'').toLowerCase().includes(search);
+  });
+
+  // Listas de GRUPO (excluem TC)
+  const semTC = filtered.filter(m => getCategoria(m) !== 'tempocerto');
+  renderGrupoSection('gradBarsOficiais', 'secOficiais', semTC.filter(isOficial),     'grad-of');
+  renderGrupoSection('gradBarsTropa',    'secTropa',    semTC.filter(isTropaGrupo),  'grad-tr');
+  renderGrupoSection('gradBarsCiaOutros','secCiaOutros',semTC.filter(isCiaOutros),   'grad-co');
+  renderGrupoSection('gradBarsCCSV',     'secCCSV',     semTC.filter(isCCSV),        'grad-ccsv');
+
+  // Abono (qualquer grupo/status exceto TC)
+  renderGrupoSection('gradBarsAbono', 'secAbono',
+    filtered.filter(m => m.abono && m.abono.trim() && getCategoria(m) !== 'tempocerto'), 'grad-abono');
+
+  // Listas de STATUS (CIA e CCSV separados por sub-label)
+  renderStatusSection('gradBarsFerias',  'secFerias',  filtered.filter(m => getCategoria(m) === 'ferias'),     'grad-fe');
+  renderStatusSection('gradBarsAptoB',   'secAptoB',   filtered.filter(m => getCategoria(m) === 'aptob'),     'grad-aptob');
+  renderStatusSection('gradBarsAptoC',   'secAptoC',   filtered.filter(m => getCategoria(m) === 'aptoc'),     'grad-aptoc');
+  renderStatusSection('gradBarsLTS',     'secLTS',     filtered.filter(m => getCategoria(m) === 'lts'),       'grad-lts');
+  renderStatusSection('gradBarsAGRR',    'secAGRR',    filtered.filter(m => getCategoria(m) === 'agrr'),      'grad-agrr');
+  renderStatusSection('gradBarsReforma', 'secReforma', filtered.filter(m => getCategoria(m) === 'reforma'),   'grad-reforma');
+  renderStatusSection('gradBarsTC',      'secTC',      filtered.filter(m => getCategoria(m) === 'tempocerto'),'grad-tc');
+}
+
+// ─── TOGGLE GRAD BAR ─────────────────────────────────────────────────────────
 function toggleGrad(header) {
-  header.nextElementSibling.classList.toggle('open');
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
   header.classList.toggle('active');
+  if (body.classList.contains('open')) loadFotosVisiveis(body);
 }
 
 function toggleGradAll(cb) {
@@ -1072,6 +1035,232 @@ function toggleGradAll(cb) {
   updateSelection();
 }
 
+// ─── SELEÇÃO ─────────────────────────────────────────────────────────────────
+function updateSelection() {
+  const checked = document.querySelectorAll('.row-cb:checked');
+  const btn = document.getElementById('btnExcluir');
+  if (checked.length > 0) { btn.style.display = 'flex'; document.getElementById('selCount').textContent = checked.length; }
+  else                     { btn.style.display = 'none'; }
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function openAddModal() {
+  editingIdx = -1;
+  document.getElementById('modalTitle').textContent = 'Adicionar Militar';
+  ['fGh','fCia','fRg','fNome','fFuncao','fId','fDe','fAte','fAbono','fObs'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('fSit').value   = 'APTO CAT A';
+  document.getElementById('fArma').value  = 'SIM';
+  document.getElementById('fColete').value= 'SIM';
+  _currentFoto   = null;
+  _removendoFoto = false;
+  const prev = document.getElementById('fotoPreview');
+  prev.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 110 110'%3E%3Ccircle cx='55' cy='55' r='55' fill='%231e3450'/%3E%3Ccircle cx='55' cy='42' r='18' fill='%23445566'/%3E%3Cellipse cx='55' cy='90' rx='30' ry='22' fill='%23445566'/%3E%3C/svg%3E";
+  document.getElementById('btnRemoverFoto').style.display = 'none';
+  document.getElementById('fFoto').value = '';
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function editarMilitar(idx) {
+  editingIdx = idx;
+  const m = efetivo[idx];
+  document.getElementById('modalTitle').textContent = 'Editar Militar';
+  document.getElementById('fGh').value     = m.gh || '';
+  document.getElementById('fRg').value     = m.rg || '';
+  document.getElementById('fNome').value   = m.nome || '';
+  document.getElementById('fCia').value    = m.cia || '';
+  document.getElementById('fFuncao').value = m.funcao || '';
+  document.getElementById('fSit').value    = m.sit || 'APTO CAT A';
+  document.getElementById('fId').value     = m.id || '';
+  document.getElementById('fArma').value   = m.arma || '';
+  document.getElementById('fColete').value = m.colete || '';
+  document.getElementById('fDe').value     = m.de || '';
+  document.getElementById('fAte').value    = m.ate || '';
+  document.getElementById('fAbono').value  = m.abono || '';
+  document.getElementById('fObs').value    = m.obs || '';
+  _currentFoto   = null;
+  _removendoFoto = false;
+  document.getElementById('fFoto').value   = '';
+  document.getElementById('btnRemoverFoto').style.display = 'none';
+
+  // Carregar foto existente
+  const prev = document.getElementById('fotoPreview');
+  prev.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 110 110'%3E%3Ccircle cx='55' cy='55' r='55' fill='%231e3450'/%3E%3Ccircle cx='55' cy='42' r='18' fill='%23445566'/%3E%3Cellipse cx='55' cy='90' rx='30' ry='22' fill='%23445566'/%3E%3C/svg%3E";
+  if (m.rg) {
+    const key = fotoKey(m.rg);
+    if (fotosCache[key]) {
+      prev.src = fotosCache[key];
+      document.getElementById('btnRemoverFoto').style.display = 'flex';
+    } else {
+      fotosRef.child(key).once('value', snap => {
+        const val = snap.val();
+        if (val) {
+          fotosCache[key] = val;
+          prev.src = val;
+          document.getElementById('btnRemoverFoto').style.display = 'flex';
+        }
+      });
+    }
+  }
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+function salvarMilitar() {
+  const gh   = document.getElementById('fGh').value;
+  const nome = document.getElementById('fNome').value.trim().toUpperCase();
+  const cia  = document.getElementById('fCia').value;
+  if (!gh || !nome || !cia) { showToast('Preencha: Patente, Nome e Setor', 'error'); return; }
+
+  const mil = {
+    gh, nome, cia,
+    rg:     document.getElementById('fRg').value.trim(),
+    id:     document.getElementById('fId').value.trim(),
+    funcao: document.getElementById('fFuncao').value.trim().toUpperCase(),
+    sit:    document.getElementById('fSit').value,
+    arma:   document.getElementById('fArma').value,
+    colete: document.getElementById('fColete').value,
+    de:     document.getElementById('fDe').value,
+    ate:    document.getElementById('fAte').value,
+    abono:  document.getElementById('fAbono').value,
+    obs:    document.getElementById('fObs').value.trim(),
+    ferias: ''
+  };
+
+  if (editingIdx >= 0) { efetivo[editingIdx] = mil; showToast(`${nome} atualizado com sucesso`, 'success'); }
+  else                 { efetivo.push(mil); showToast(`${nome} adicionado ao efetivo`, 'success'); }
+
+  efetivo.sort((a, b) => {
+    const oa = ORDEM_PATENTE[(a.gh||'').trim().toUpperCase()] || 99;
+    const ob = ORDEM_PATENTE[(b.gh||'').trim().toUpperCase()] || 99;
+    if (oa !== ob) return oa - ob;
+    return (parseInt(a.rg)||999999) - (parseInt(b.rg)||999999);
+  });
+
+  saveData();
+  closeModal();
+  refreshAll();
+
+  // Salvar/remover foto
+  if (mil.rg) {
+    if (_currentFoto) {
+      saveFoto(mil.rg, _currentFoto).catch(err => console.error('Foto não salva:', err));
+      _currentFoto = null;
+    } else if (_removendoFoto) {
+      deleteFoto(mil.rg);
+      _removendoFoto = false;
+    }
+  }
+}
+
+function excluirUm(idx) {
+  const m = efetivo[idx];
+  if (confirm(`Confirma exclusão de ${m.nome} do efetivo?`)) {
+    if (m.rg) deleteFoto(m.rg);
+    efetivo.splice(idx, 1);
+    saveData();
+    showToast(`${m.nome} excluído do efetivo`, 'info');
+    refreshAll();
+  }
+}
+
+function excluirSelecionados() {
+  const checked = [...document.querySelectorAll('.row-cb:checked')];
+  const idxs = checked.map(cb => parseInt(cb.dataset.idx)).sort((a, b) => b - a);
+  if (confirm(`Confirma exclusão de ${idxs.length} militar(es)?`)) {
+    idxs.forEach(i => { if (efetivo[i] && efetivo[i].rg) deleteFoto(efetivo[i].rg); efetivo.splice(i, 1); });
+    saveData();
+    showToast(`${idxs.length} militar(es) excluído(s)`, 'info');
+    document.getElementById('cbAll') && (document.getElementById('cbAll').checked = false);
+    refreshAll();
+  }
+}
+
+function resetarDados() {
+  if (confirm('Isso vai restaurar os dados originais da planilha. Todas as alterações serão perdidas. Continuar?')) {
+    efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
+    saveData(); showToast('Dados restaurados ao original', 'info'); refreshAll();
+  }
+}
+
+// ─── EXPORTAR ─────────────────────────────────────────────────────────────────
+function exportarCSV() {
+  const headers = ['Patente','RG','ID Funcional','Nome','Setor','Função','Sit. Sanitária','Arma','Colete','De','Até','Em Abono Desde','Observação'];
+  const rows = efetivo.map(m => [m.gh,m.rg,m.id,m.nome,m.cia,m.funcao,m.sit,m.arma,m.colete,m.de,m.ate,m.abono,m.obs]
+    .map(v => `"${(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `efetivo_bepe_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('CSV exportado com sucesso', 'success');
+}
+
+function exportarExcel() {
+  const catMap = {oper:'Apto A',ferias:'Férias',aptob:'Apto B',aptoc:'Apto C',lts:'LTS',agrr:'Ag. R.R',reforma:'Reforma',tempocerto:'Tempo Certo'};
+  const headers = ['Patente','RG','ID Funcional','Nome','Setor','Função','Sit. Sanitária','Categoria','Arma','Colete','De','Até','Em Abono Desde','Observação'];
+  const data = efetivo.map(m => [m.gh,m.rg,m.id,m.nome,m.cia,m.funcao,m.sit,catMap[getCategoria(m)]||'',m.arma,m.colete,m.de,m.ate,m.abono,m.obs]);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  ws['!cols'] = [14,12,14,35,12,30,16,14,8,8,10,10,14,20].map(w => ({wch:w}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Efetivo BEPE');
+  const met = calcMetrics();
+  const resumo = [
+    ['RESUMO DO EFETIVO - BEPE'],[''],['Categoria','Quantidade'],
+    ['Efetivo Total (sem TC)', met.t],['Oficiais', met.ofAtivos],
+    ['Apto A Tropa', met.aptoATropa],['CIA Outros', met.aptoAOutros],['CCSV Apto A', met.aptoACCSV],
+    ['Abono Permanência', met.abono],
+    ['Apto Cat B', met.aptoB],['Apto Cat C', met.aptoC],
+    ['Afastados (LTS+Ag.RR+Ref)', met.lts+met.rr+met.reforma],
+    ['De Férias', met.fer],['Tempo Certo (excluído do total)', met.tc],[''],
+    ['Operacionalidade', met.oper+'%'],[''],['Gerado em', new Date().toLocaleString('pt-BR')]
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(resumo);
+  ws2['!cols'] = [{wch:32},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Resumo');
+  XLSX.writeFile(wb, `efetivo_bepe_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('Excel exportado com sucesso', 'success');
+}
+
+// ─── COMPARTILHAR ─────────────────────────────────────────────────────────────
+function abrirCompartilhar() {
+  const base = window.location.origin.includes('localhost')
+    ? 'https://bruxo2013.github.io/bepe-dashboard/dashboard_efetivo.html'
+    : window.location.origin + window.location.pathname;
+  document.getElementById('linkView').value  = base;
+  document.getElementById('linkAdmin').value = base + '?acesso=admin';
+  document.getElementById('shareOverlay').classList.add('active');
+}
+function fecharCompartilhar() { document.getElementById('shareOverlay').classList.remove('active'); }
+function copiarLink(inputId) {
+  const input = document.getElementById(inputId);
+  navigator.clipboard.writeText(input.value).then(() => showToast('Link copiado!', 'success'))
+    .catch(() => { input.select(); document.execCommand('copy'); showToast('Link copiado!', 'success'); });
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─── NAVEGAÇÃO ────────────────────────────────────────────────────────────────
+function irPara(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const y = el.getBoundingClientRect().top + window.scrollY - 80;
+  window.scrollTo({ top: y, behavior: 'smooth' });
+}
+
+function hasSearch() { return document.getElementById('searchInput').value.trim().length > 0; }
+
+// ─── REFRESH ─────────────────────────────────────────────────────────────────
 function refreshAll() {
   const m = calcMetrics();
   renderCards(m);
@@ -1081,10 +1270,11 @@ function refreshAll() {
   updateSelection();
 }
 
-// INIT
-document.getElementById('headerDate').textContent = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase() + ' — Atualizado agora';
-loadData();
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+document.getElementById('headerDate').textContent =
+  new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase() + ' — Atualizado agora';
 
+loadData();
 refreshAll();
 
 let resizeTimer;
@@ -1093,13 +1283,8 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(() => { renderCharts(calcMetrics()); renderSetorCharts(); }, 250);
 });
 
-document.getElementById('modalOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
-document.getElementById('shareOverlay').addEventListener('click', function(e) {
-  if (e.target === this) fecharCompartilhar();
-});
+document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+document.getElementById('shareOverlay').addEventListener('click', function(e) { if (e.target === this) fecharCompartilhar(); });
 </script>
-
 </body>
 </html>
