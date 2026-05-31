@@ -1142,18 +1142,39 @@ function salvarMilitar() {
   });
 
   saveData();
+
+  // Salvar foto ANTES do refreshAll para que o cache já esteja populado
+  const rgParaFoto = mil.rg;
+  if (rgParaFoto) {
+    if (_currentFoto) {
+      saveFoto(rgParaFoto, _currentFoto)
+        .then(() => showToast('📷 Foto salva com sucesso', 'success'))
+        .catch(err => showToast('❌ Erro ao salvar foto: ' + err.message, 'error'));
+      _currentFoto = null;
+    } else if (_removendoFoto) {
+      deleteFoto(rgParaFoto);
+      _removendoFoto = false;
+    }
+  }
+
   closeModal();
   refreshAll();
 
-  // Salvar/remover foto
-  if (mil.rg) {
-    if (_currentFoto) {
-      saveFoto(mil.rg, _currentFoto).catch(err => console.error('Foto não salva:', err));
-      _currentFoto = null;
-    } else if (_removendoFoto) {
-      deleteFoto(mil.rg);
-      _removendoFoto = false;
-    }
+  // Após refresh, abrir automaticamente a barra do militar editado e mostrar a foto
+  if (rgParaFoto && fotosCache[fotoKey(rgParaFoto)]) {
+    requestAnimationFrame(() => {
+      const img = document.querySelector(`.foto-row[data-rg="${rgParaFoto}"]`);
+      if (img) {
+        const body   = img.closest('.grad-bar-body');
+        const header = body ? body.previousElementSibling : null;
+        if (body && !body.classList.contains('open')) {
+          body.classList.add('open');
+          if (header) header.classList.add('active');
+        }
+        if (body) loadFotosVisiveis(body);
+        img.closest('.grad-bar') && img.closest('.grad-bar').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
   }
 }
 
@@ -1268,6 +1289,10 @@ function refreshAll() {
   renderSetorCharts();
   renderGradBars();
   updateSelection();
+  // Carregar fotos de barras que já estão abertas (ex: busca ativa)
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.grad-bar-body.open').forEach(body => loadFotosVisiveis(body));
+  });
 }
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
