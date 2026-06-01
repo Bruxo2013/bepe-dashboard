@@ -544,7 +544,8 @@ function isCCSV(m) { return m.cia === 'CCSV'; }
 // ─── CATEGORIA ───────────────────────────────────────────────────────────────
 function getCategoria(m) {
   const f = (m.funcao||'').toUpperCase();
-  if (f.includes('FÉRIAS') || f.includes('FERIAS')) return 'ferias';
+  if (f.includes('FÉRIAS') || f.includes('FERIAS'))       return 'ferias';
+  if (f.includes('AGUARDANDO R') || f.includes('AG. R.R')) return 'agrr';
   const s = (m.sit||'').toUpperCase();
   if (s === 'APTO CAT B') return 'aptob';
   if (s === 'APTO CAT C') return 'aptoc';
