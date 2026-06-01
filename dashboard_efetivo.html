@@ -677,7 +677,7 @@ function saveData() {
 function calcMetrics() {
   const tc      = efetivo.filter(m => getCategoria(m) === 'tempocerto').length;
   const rr      = efetivo.filter(m => getCategoria(m) === 'agrr').length;
-  const t       = efetivo.length - tc - rr;  // exclui TC e Ag. R.R
+  const t       = efetivo.length - tc;  // exclui apenas TC
   const aptoA   = efetivo.filter(m => getCategoria(m) === 'oper').length;
   const aptoB   = efetivo.filter(m => getCategoria(m) === 'aptob').length;
   const aptoC   = efetivo.filter(m => getCategoria(m) === 'aptoc').length;
@@ -686,7 +686,7 @@ function calcMetrics() {
   const fer     = efetivo.filter(m => getCategoria(m) === 'ferias').length;
   const abono   = efetivo.filter(m => m.abono && m.abono.trim()).length;
 
-  const excluidos = (m) => getCategoria(m) === 'tempocerto' || getCategoria(m) === 'agrr';
+  const excluidos = (m) => getCategoria(m) === 'tempocerto';
   const ofAtivos   = efetivo.filter(m => isOficial(m) && !excluidos(m)).length;
   const pr         = t - ofAtivos;
   const aptoATropa = efetivo.filter(m => isTropaGrupo(m) && getCategoria(m) === 'oper').length;
@@ -695,7 +695,7 @@ function calcMetrics() {
   const oper       = t > 0 ? (aptoA / t * 100).toFixed(1) : '0.0';
 
   const patentes = {};
-  efetivo.forEach(m => { if (!excluidos(m)) patentes[m.gh] = (patentes[m.gh] || 0) + 1; });
+  efetivo.forEach(m => { if (getCategoria(m) !== 'tempocerto') patentes[m.gh] = (patentes[m.gh] || 0) + 1; });
   const setores = {};
   efetivo.forEach(m => { setores[m.cia] = (setores[m.cia] || 0) + 1; });
 
@@ -707,7 +707,7 @@ function renderCards(m) {
   document.getElementById('cardsContainer').innerHTML = `
     <div class="card total" onclick="window.scrollTo({top:0,behavior:'smooth'})">
       <div class="number">${m.t}</div><div class="label">Efetivo Total</div>
-      <div class="sub">${m.ofAtivos} Of · ${m.pr} Praças <span style="color:#8D6E63;font-size:.6rem">(TC: ${m.tc} · RR: ${m.rr})</span></div>
+      <div class="sub">${m.ofAtivos} Of · ${m.pr} Praças <span style="color:#8D6E63;font-size:.65rem">(TC: ${m.tc})</span></div>
     </div>
     <div class="card oficiais-card" onclick="irPara('secOficiais')">
       <div class="number">${m.ofAtivos}</div><div class="label">Oficiais</div><div class="sub">Comando e gestão</div>
