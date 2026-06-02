@@ -315,6 +315,18 @@ body.view-mode .edit-only{display:none !important}
   .alerta-panel{top:auto;bottom:80px;left:14px;right:14px;transform:none;width:auto;max-height:60vh}
 }
 
+/* ─── SEÇÕES COLAPSÁVEIS ─── */
+.grad-section h3{cursor:pointer;user-select:none;padding:10px 14px;background:#1a2940;border-radius:8px;border:1px solid #1e3450;transition:all .2s;margin-bottom:8px}
+.grad-section h3:hover{background:#1e3450;border-color:#2196F3}
+.grad-section h3.sec-collapsed{margin-bottom:0}
+.grad-section h3 .sec-chevron{display:inline-block;transition:transform .3s;font-size:.65rem;color:#4FC3F7;margin-right:6px}
+.grad-section h3.sec-collapsed .sec-chevron{transform:rotate(-90deg)}
+.grad-section h3 .sec-pill{margin-left:auto;background:#2196F320;color:#2196F3;padding:2px 10px;border-radius:10px;font-size:.7rem;font-weight:700;letter-spacing:.5px}
+.grad-section h3{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.grad-section h3 > span:not(.sec-chevron):not(.sec-pill){flex:1;display:inline-flex;align-items:center;gap:6px}
+.grad-section-content{max-height:5000px;overflow:hidden;transition:max-height .4s ease,opacity .25s ease;opacity:1}
+.grad-section-content.collapsed{max-height:0;opacity:0}
+
 /* ─── MODAL TOOLS (Tendência/Armamento/Log/Boletim) ─── */
 .tool-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:1100;justify-content:center;align-items:center;padding:20px}
 .tool-overlay.active{display:flex}
@@ -1747,6 +1759,84 @@ window.toggleGrad = function(header) {
   // Quando o usuário interagir, restaurar todas as linhas escondidas
   const body = header.nextElementSibling;
   if (body) body.querySelectorAll('tr').forEach(tr => tr.style.display = '');
+};
+
+// ─── SEÇÕES COLAPSÁVEIS ──────────────────────────────────────────────────────
+const SEC_STATE_KEY = 'bepe_sec_collapsed';
+
+function getEstadoSecoes() {
+  try { return JSON.parse(localStorage.getItem(SEC_STATE_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+
+function setEstadoSecoes(estado) {
+  localStorage.setItem(SEC_STATE_KEY, JSON.stringify(estado));
+}
+
+function setupSecoesColapsaveis() {
+  const secoes = document.querySelectorAll('.grad-section');
+  const estado = getEstadoSecoes();
+  const buscando = hasSearch();
+
+  secoes.forEach(sec => {
+    const h3 = sec.querySelector('h3');
+    if (!h3 || h3.dataset.colapsavel === '1') return;
+    h3.dataset.colapsavel = '1';
+
+    // Envolver o conteúdo (tudo exceto o h3) num wrapper
+    const wrap = document.createElement('div');
+    wrap.className = 'grad-section-content';
+    const filhos = [...sec.children].filter(c => c !== h3);
+    filhos.forEach(c => wrap.appendChild(c));
+    sec.appendChild(wrap);
+
+    // Preparar o h3 com chevron e contagem
+    const textoOriginal = h3.innerHTML;
+    h3.innerHTML = `<span class="sec-chevron">▼</span><span>${textoOriginal}</span><span class="sec-pill"></span>`;
+
+    h3.addEventListener('click', () => {
+      const e = getEstadoSecoes();
+      const id = sec.id || 'sec_' + Math.random();
+      const colapsada = h3.classList.toggle('sec-collapsed');
+      wrap.classList.toggle('collapsed', colapsada);
+      e[id] = colapsada;
+      setEstadoSecoes(e);
+    });
+
+    // Restaurar estado salvo (mas se estiver buscando, força aberto)
+    if (estado[sec.id] && !buscando) {
+      h3.classList.add('sec-collapsed');
+      wrap.classList.add('collapsed');
+    }
+  });
+}
+
+function atualizarPillsSecoes() {
+  const buscando = hasSearch();
+  document.querySelectorAll('.grad-section').forEach(sec => {
+    const h3 = sec.querySelector('h3');
+    if (!h3) return;
+    const pill = h3.querySelector('.sec-pill');
+    // Contar militares totais visíveis na seção (somar as grad-bar-count)
+    const counts = [...sec.querySelectorAll('.grad-bar-count')];
+    const total = counts.reduce((s, c) => s + (parseInt(c.textContent) || 0), 0);
+    if (pill) pill.textContent = total;
+
+    // Durante busca, força abrir as seções com resultado
+    if (buscando && total > 0) {
+      const wrap = sec.querySelector('.grad-section-content');
+      if (wrap) wrap.classList.remove('collapsed');
+      h3.classList.remove('sec-collapsed');
+    }
+  });
+}
+
+// Integrar com refreshAll e renderGradBars
+const _origRefreshAll = refreshAll;
+window.refreshAll = function() {
+  _origRefreshAll.apply(this, arguments);
+  setupSecoesColapsaveis();
+  atualizarPillsSecoes();
 };
 
 // Fecha painel ao clicar fora
