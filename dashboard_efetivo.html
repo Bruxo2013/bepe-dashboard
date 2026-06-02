@@ -276,14 +276,14 @@ body.view-mode .edit-only{display:none !important}
 }
 
 /* ─── ALERTAS LTS VENCENDO ─── */
-.alerta-bell{position:fixed;top:14px;right:20px;z-index:90;cursor:pointer;background:#1a2940;border:1px solid #1e3450;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all .2s}
+.alerta-bell{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:90;cursor:pointer;background:#1a2940;border:1px solid #1e3450;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all .2s}
 .alerta-bell:hover{border-color:#f44336;box-shadow:0 0 12px #f4433640}
 .alerta-bell .alerta-badge{position:absolute;top:-4px;right:-4px;background:#f44336;color:#fff;font-size:.62rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;animation:pulse-bell 2s infinite}
 @keyframes pulse-bell{0%,100%{box-shadow:0 0 0 0 #f4433660}50%{box-shadow:0 0 0 6px #f4433600}}
 .alerta-bell.empty{opacity:.4}
 .alerta-bell.empty .alerta-badge{display:none}
 
-.alerta-panel{position:fixed;top:64px;right:20px;width:380px;max-width:calc(100vw - 40px);max-height:70vh;background:#1a2940;border:1px solid #f4433640;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.6);z-index:95;display:none;flex-direction:column;overflow:hidden}
+.alerta-panel{position:fixed;top:64px;left:50%;transform:translateX(-50%);width:380px;max-width:calc(100vw - 40px);max-height:70vh;background:#1a2940;border:1px solid #f4433640;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.6);z-index:95;display:none;flex-direction:column;overflow:hidden}
 .alerta-panel.show{display:flex}
 .alerta-panel-head{padding:14px 18px;background:linear-gradient(135deg,#f4433620,#1a2940);border-bottom:1px solid #f4433630;display:flex;align-items:center;gap:10px}
 .alerta-panel-head h3{font-size:.85rem;color:#f44336;font-weight:700;letter-spacing:.5px;flex:1}
@@ -311,8 +311,123 @@ body.view-mode .edit-only{display:none !important}
 .mil-dias.info{background:#2196F320;color:#2196F3}
 
 @media(max-width:600px){
-  .alerta-bell{top:auto;bottom:20px;right:14px;width:48px;height:48px;font-size:1.4rem;box-shadow:0 4px 16px rgba(0,0,0,.5)}
-  .alerta-panel{top:auto;bottom:80px;right:14px;left:14px;width:auto;max-height:60vh}
+  .alerta-bell{top:auto;bottom:20px;left:50%;transform:translateX(-50%);width:48px;height:48px;font-size:1.4rem;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  .alerta-panel{top:auto;bottom:80px;left:14px;right:14px;transform:none;width:auto;max-height:60vh}
+}
+
+/* ─── MODAL TOOLS (Tendência/Armamento/Log/Boletim) ─── */
+.tool-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:1100;justify-content:center;align-items:center;padding:20px}
+.tool-overlay.active{display:flex}
+.tool-modal{background:#0f1923;border:1px solid #1e3450;border-radius:12px;width:100%;max-width:980px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.tool-head{padding:16px 22px;background:linear-gradient(135deg,#1a2940,#0d1b2a);border-bottom:1px solid #1e3450;display:flex;align-items:center;gap:12px}
+.tool-head h2{font-size:1rem;color:#fff;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;flex:1;display:flex;align-items:center;gap:10px}
+.tool-head h2::before{content:'';width:3px;height:18px;background:#4FC3F7;border-radius:2px}
+.tool-head .actions{display:flex;gap:8px}
+.tool-head .close-x{background:#1e3450;border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+.tool-head .close-x:hover{background:#f44336}
+.tool-body{flex:1;overflow-y:auto;padding:20px}
+.tool-body::-webkit-scrollbar{width:8px}
+.tool-body::-webkit-scrollbar-thumb{background:#1e3450;border-radius:4px}
+
+/* TENDÊNCIA */
+.tend-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.tend-stat{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:14px;border-top:2px solid var(--tc,#2196F3)}
+.tend-stat .tv{font-size:1.7rem;font-weight:800;color:var(--tc,#2196F3)}
+.tend-stat .tl{font-size:.62rem;color:#8899aa;text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.tend-stat .td{font-size:.7rem;margin-top:4px}
+.tend-up{color:#4CAF50}.tend-down{color:#f44336}.tend-eq{color:#8899aa}
+.tend-chart-box{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:16px;margin-bottom:14px}
+.tend-empty{text-align:center;padding:30px;color:#8899aa;font-size:.85rem;background:#1a2940;border-radius:8px;border:1px dashed #1e3450}
+.tend-empty .ico{font-size:2.2rem;margin-bottom:10px;display:block}
+
+/* ARMAMENTO */
+.arma-top{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.arma-c{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:14px;text-align:center;border-top:2px solid var(--ac,#2196F3)}
+.arma-c .av{font-size:2rem;font-weight:800;color:var(--ac,#2196F3)}
+.arma-c .al{font-size:.62rem;color:#8899aa;text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.arma-c .ap{font-size:.68rem;color:#667788;margin-top:2px}
+.ac-ok{--ac:#4CAF50}.ac-pend{--ac:#FF9800}.ac-cok{--ac:#26C6DA}.ac-cpend{--ac:#f44336}
+.arma-setores{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.arma-bloco{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:14px}
+.arma-bloco h4{font-size:.7rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px}
+.arma-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.arma-row .arl{font-size:.72rem;color:#bbb;min-width:60px}
+.arma-row .art{flex:1;height:16px;background:#0d1b2a;border-radius:3px;overflow:hidden;display:flex}
+.arma-row .ars-ok{background:linear-gradient(90deg,#4CAF50,#2e7d32);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;color:#fff}
+.arma-row .ars-no{background:linear-gradient(90deg,#f44336,#c62828);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;color:#fff}
+.arma-row .arv{font-size:.68rem;color:#bbb;min-width:50px;text-align:right}
+.arma-pend{background:#1a2940;border:1px solid #f4433640;border-left:3px solid #f44336;border-radius:8px;padding:14px}
+.arma-pend h4{font-size:.75rem;color:#f44336;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+.pend-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;max-height:300px;overflow-y:auto}
+.pend-item{background:#0d1b2a;border-radius:6px;padding:8px 10px;font-size:.75rem;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;transition:background .2s}
+.pend-item:hover{background:#1e3450}
+.pend-item .pn{color:#e0e0e0;font-weight:600;font-size:.74rem}
+.pend-item .pp{font-size:.6rem;color:#8899aa}
+
+/* LOG */
+.log-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.log-fbtn{padding:6px 12px;border-radius:18px;border:1px solid #1e3450;background:#0d1b2a;color:#8899aa;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .2s}
+.log-fbtn:hover,.log-fbtn.on{background:#2196F320;color:#2196F3;border-color:#2196F3}
+.log-clear-btn{margin-left:auto;font-size:.7rem;color:#8899aa;background:transparent;border:1px solid #1e3450;padding:6px 12px;border-radius:6px;cursor:pointer}
+.log-clear-btn:hover{color:#f44336;border-color:#f44336}
+.log-list{display:flex;flex-direction:column;gap:6px}
+.log-e{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:10px 14px;display:flex;gap:10px;align-items:center}
+.log-i{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
+.li-edit{background:#2196F320;border:1px solid #2196F340;color:#2196F3}
+.li-add{background:#4CAF5020;border:1px solid #4CAF5040;color:#4CAF50}
+.li-del{background:#f4433620;border:1px solid #f4433640;color:#f44336}
+.li-sync{background:#FF980020;border:1px solid #FF980040;color:#FF9800}
+.li-foto{background:#9C27B020;border:1px solid #9C27B040;color:#9C27B0}
+.log-b{flex:1;min-width:0}
+.log-m{font-size:.78rem;color:#e0e0e0;line-height:1.3}
+.log-m strong{color:#4FC3F7}
+.log-mt{font-size:.62rem;color:#667788;margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+.log-chip{font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:3px;flex-shrink:0}
+.ch-edit{background:#2196F320;color:#2196F3}.ch-add{background:#4CAF5020;color:#4CAF50}.ch-del{background:#f4433620;color:#f44336}.ch-sync{background:#FF980020;color:#FF9800}.ch-foto{background:#9C27B020;color:#9C27B0}
+
+/* BOLETIM */
+.bol-paper{background:#fff;color:#111;border-radius:8px;padding:32px;font-family:'Times New Roman',serif;max-width:780px;margin:0 auto}
+.bol-h{text-align:center;padding-bottom:14px;margin-bottom:18px;border-bottom:3px double #222}
+.bol-h .logo{font-size:2.2rem;margin-bottom:4px}
+.bol-h h2{font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#111}
+.bol-h h3{font-size:.85rem;font-weight:400;margin-top:2px;color:#333}
+.bol-h .dt{margin-top:8px;font-size:.8rem;color:#555;background:#f5f5f5;padding:4px 16px;border-radius:4px;display:inline-block}
+.bol-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+.bk{border:2px solid #ddd;border-radius:5px;padding:10px;text-align:center}
+.bk .bv{font-size:1.6rem;font-weight:700}
+.bk .bl{font-size:.6rem;text-transform:uppercase;color:#555;letter-spacing:.5px}
+.bk-g{border-color:#4caf50}.bk-g .bv{color:#2e7d32}
+.bk-a{border-color:#ff9800}.bk-a .bv{color:#e65100}
+.bk-r{border-color:#f44336}.bk-r .bv{color:#b71c1c}
+.bk-b{border-color:#1976d2}.bk-b .bv{color:#1565c0}
+.bol-sec{margin-bottom:14px}
+.bol-sec h4{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #999;padding-bottom:4px;margin-bottom:8px;color:#111}
+.bol-t{width:100%;border-collapse:collapse;font-size:.74rem}
+.bol-t th{background:#eee;padding:5px 8px;text-align:left;font-weight:700;border:1px solid #ccc;color:#111}
+.bol-t td{padding:4px 8px;border:1px solid #ddd}
+.bol-t tr:nth-child(even){background:#f9f9f9}
+.bol-t tr.bol-total td{font-weight:700;background:#f0f0f0}
+.bol-assin{margin-top:30px;display:flex;justify-content:flex-end}
+.bol-assin .ass{text-align:center;min-width:240px}
+.bol-assin .nm{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-top:1px solid #333;padding-top:6px;margin-top:30px;color:#111}
+.bol-assin .pt{font-size:.7rem;color:#555}
+
+@media print{
+  body > *:not(#boletimOverlay){display:none !important}
+  #boletimOverlay{position:static;background:#fff;padding:0;display:block !important}
+  #boletimOverlay .tool-modal{box-shadow:none;border:none;max-width:100%;max-height:none}
+  #boletimOverlay .tool-head{display:none}
+  #boletimOverlay .tool-body{overflow:visible;padding:0}
+  .bol-paper{box-shadow:none;border-radius:0;padding:20px}
+}
+
+@media(max-width:700px){
+  .arma-top{grid-template-columns:1fr 1fr}
+  .arma-setores{grid-template-columns:1fr}
+  .tool-modal{max-height:96vh}
+  .tool-body{padding:14px}
+  .bol-paper{padding:18px}
+  .bol-kpis{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
@@ -349,6 +464,10 @@ body.view-mode .edit-only{display:none !important}
   <button class="btn btn-outline" onclick="exportarCSV()">📄 CSV</button>
   <button class="btn btn-outline btn-excel" onclick="exportarExcel()">📊 Excel</button>
   <button class="btn btn-success edit-only" onclick="abrirCompartilhar()">&#128279; Compartilhar</button>
+  <button class="btn btn-outline" onclick="abrirTendencia()" title="Tendência do efetivo">📈 Tendência</button>
+  <button class="btn btn-outline" onclick="abrirArmamento()" title="Painel de armamento">🔫 Armamento</button>
+  <button class="btn btn-outline" onclick="abrirLog()" title="Log de alterações">📝 Log</button>
+  <button class="btn btn-outline" onclick="abrirBoletim()" title="Boletim diário">📋 Boletim</button>
   <button class="btn btn-outline edit-only" onclick="resetarDados()">Resetar Dados Originais</button>
 </div>
 
@@ -541,6 +660,53 @@ body.view-mode .edit-only{display:none !important}
         <div style="font-size:.7rem;color:#667788;margin-top:4px">Quem receber este link pode adicionar, editar e excluir militares</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- MODAL TENDÊNCIA -->
+<div class="tool-overlay" id="tendenciaOverlay">
+  <div class="tool-modal">
+    <div class="tool-head">
+      <h2>📈 Tendência do Efetivo</h2>
+      <button class="close-x" onclick="fecharTool('tendenciaOverlay')">×</button>
+    </div>
+    <div class="tool-body" id="tendenciaBody"></div>
+  </div>
+</div>
+
+<!-- MODAL ARMAMENTO -->
+<div class="tool-overlay" id="armamentoOverlay">
+  <div class="tool-modal">
+    <div class="tool-head">
+      <h2>🔫 Controle de Armamento</h2>
+      <button class="close-x" onclick="fecharTool('armamentoOverlay')">×</button>
+    </div>
+    <div class="tool-body" id="armamentoBody"></div>
+  </div>
+</div>
+
+<!-- MODAL LOG -->
+<div class="tool-overlay" id="logOverlay">
+  <div class="tool-modal">
+    <div class="tool-head">
+      <h2>📝 Log de Alterações</h2>
+      <button class="close-x" onclick="fecharTool('logOverlay')">×</button>
+    </div>
+    <div class="tool-body" id="logBody"></div>
+  </div>
+</div>
+
+<!-- MODAL BOLETIM -->
+<div class="tool-overlay" id="boletimOverlay">
+  <div class="tool-modal">
+    <div class="tool-head">
+      <h2>📋 Boletim Diário</h2>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir / PDF</button>
+      </div>
+      <button class="close-x" onclick="fecharTool('boletimOverlay')">×</button>
+    </div>
+    <div class="tool-body" id="boletimBody"></div>
   </div>
 </div>
 
@@ -1453,29 +1619,58 @@ function irParaMilitar(rg) {
   toggleAlertaPanel();
   const sec = document.getElementById('secLTS');
   if (!sec) return;
-  // Abrir todas as barras LTS e rolar
   sec.style.display = 'block';
-  sec.querySelectorAll('.grad-bar-body').forEach(b => {
-    b.classList.add('open');
+
+  // Fechar TODAS as barras de TODAS as seções primeiro
+  document.querySelectorAll('.grad-bar-body.open').forEach(b => {
+    b.classList.remove('open');
     const h = b.previousElementSibling;
-    if (h) h.classList.add('active');
-    loadFotosVisiveis(b);
+    if (h) h.classList.remove('active');
   });
+
   setTimeout(() => {
-    const linha = document.querySelector(`.alerta-mil[onclick*="'${rg}'"]`);
-    sec.scrollIntoView({ behavior:'smooth', block:'start' });
-    // Destacar o militar específico
+    // Encontrar a foto do militar (cada barra tem só uma patente)
     const img = document.querySelector(`.foto-row[data-rg="${rg}"]`);
-    if (img) {
-      const tr = img.closest('tr');
-      if (tr) {
-        tr.style.transition = 'background .4s';
-        tr.style.background = '#2196F340';
-        setTimeout(() => { tr.style.background = ''; }, 2500);
-      }
+    if (!img) {
+      sec.scrollIntoView({ behavior:'smooth', block:'start' });
+      return;
     }
-  }, 100);
+    // Abrir SÓ a barra que contém esse militar
+    const body = img.closest('.grad-bar-body');
+    if (body) {
+      body.classList.add('open');
+      const h = body.previousElementSibling;
+      if (h) h.classList.add('active');
+      loadFotosVisiveis(body);
+    }
+    // Esconder na tabela todos os outros militares (mostrar só esse)
+    const tabela = img.closest('table');
+    if (tabela) {
+      const linhaAtual = img.closest('tr');
+      tabela.querySelectorAll('tbody tr').forEach(tr => {
+        if (tr !== linhaAtual) tr.style.display = 'none';
+      });
+    }
+    // Rolar até o militar
+    const bar = img.closest('.grad-bar');
+    if (bar) bar.scrollIntoView({ behavior:'smooth', block:'center' });
+    // Destacar a linha
+    const tr = img.closest('tr');
+    if (tr) {
+      tr.style.transition = 'background .4s';
+      tr.style.background = '#2196F340';
+    }
+  }, 50);
 }
+
+// Restaurar visibilidade de todas as linhas ao expandir/recolher qualquer barra
+const _origToggleGrad = toggleGrad;
+window.toggleGrad = function(header) {
+  _origToggleGrad.apply(this, arguments);
+  // Quando o usuário interagir, restaurar todas as linhas escondidas
+  const body = header.nextElementSibling;
+  if (body) body.querySelectorAll('tr').forEach(tr => tr.style.display = '');
+};
 
 // Fecha painel ao clicar fora
 document.addEventListener('click', (e) => {
@@ -1485,6 +1680,119 @@ document.addEventListener('click', (e) => {
     panel.classList.remove('show');
   }
 });
+
+// ─── DRAG DO SINO DE ALERTA ──────────────────────────────────────────────────
+(function setupDragSino() {
+  const bell = document.getElementById('alertaBell');
+  if (!bell) return;
+  const BELL_POS_KEY = 'bepe_alerta_pos';
+
+  // Restaurar posição salva
+  function restaurarPos() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(BELL_POS_KEY) || 'null');
+      if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
+        const maxX = window.innerWidth  - bell.offsetWidth - 4;
+        const maxY = window.innerHeight - bell.offsetHeight - 4;
+        const x = Math.max(4, Math.min(saved.x, maxX));
+        const y = Math.max(4, Math.min(saved.y, maxY));
+        bell.style.left = x + 'px';
+        bell.style.top  = y + 'px';
+        bell.style.right = 'auto';
+        bell.style.bottom = 'auto';
+        bell.style.transform = 'none';
+      }
+    } catch(e) {}
+  }
+  setTimeout(restaurarPos, 100);
+  window.addEventListener('resize', restaurarPos);
+
+  let dragging = false;
+  let startX, startY, startLeft, startTop;
+  let moved = false;
+
+  function onStart(e) {
+    const touch = e.touches ? e.touches[0] : e;
+    startX = touch.clientX;
+    startY = touch.clientY;
+    const r = bell.getBoundingClientRect();
+    startLeft = r.left;
+    startTop  = r.top;
+    dragging = true;
+    moved = false;
+    bell.style.transition = 'none';
+    bell.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    const touch = e.touches ? e.touches[0] : e;
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+    if (!moved) return;
+    let nx = startLeft + dx;
+    let ny = startTop  + dy;
+    nx = Math.max(4, Math.min(nx, window.innerWidth  - bell.offsetWidth  - 4));
+    ny = Math.max(4, Math.min(ny, window.innerHeight - bell.offsetHeight - 4));
+    bell.style.left = nx + 'px';
+    bell.style.top  = ny + 'px';
+    bell.style.right = 'auto';
+    bell.style.bottom = 'auto';
+    bell.style.transform = 'none';
+    e.preventDefault();
+  }
+
+  function onEnd(e) {
+    if (!dragging) return;
+    dragging = false;
+    bell.style.cursor = 'grab';
+    bell.style.transition = '';
+    if (moved) {
+      const r = bell.getBoundingClientRect();
+      localStorage.setItem(BELL_POS_KEY, JSON.stringify({x: r.left, y: r.top}));
+      // Reposicionar o painel ao lado do sino
+      reposicionarPainel();
+    }
+  }
+
+  function reposicionarPainel() {
+    const panel = document.getElementById('alertaPanel');
+    if (!panel) return;
+    const r = bell.getBoundingClientRect();
+    const pw = 380;
+    const ph = panel.offsetHeight || 400;
+    let px = r.left + r.width/2 - pw/2;
+    let py = r.bottom + 8;
+    // Se passar da tela à direita, joga pra esquerda
+    if (px + pw > window.innerWidth - 10) px = window.innerWidth - pw - 10;
+    if (px < 10) px = 10;
+    // Se passar embaixo, abre acima
+    if (py + ph > window.innerHeight - 10) py = r.top - ph - 8;
+    panel.style.left = px + 'px';
+    panel.style.top  = py + 'px';
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.transform = 'none';
+  }
+
+  // Substituir click padrão para considerar drag
+  bell.onclick = null;
+  bell.addEventListener('click', (e) => {
+    if (moved) { e.preventDefault(); e.stopPropagation(); return; }
+    reposicionarPainel();
+    toggleAlertaPanel();
+  });
+
+  bell.style.cursor = 'grab';
+  bell.addEventListener('mousedown', onStart);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onEnd);
+  bell.addEventListener('touchstart', onStart, {passive:false});
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('touchend',  onEnd);
+})();
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 document.getElementById('headerDate').textContent =
@@ -1501,6 +1809,458 @@ window.addEventListener('resize', () => {
 
 document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 document.getElementById('shareOverlay').addEventListener('click', function(e) { if (e.target === this) fecharCompartilhar(); });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  FERRAMENTAS: TENDÊNCIA · ARMAMENTO · LOG · BOLETIM
+// ═══════════════════════════════════════════════════════════════════════════
+
+const HISTORICO_REF = db.ref('historico');
+const LOG_REF       = db.ref('logs');
+
+function fecharTool(id) { document.getElementById(id).classList.remove('active'); }
+['tendenciaOverlay','armamentoOverlay','logOverlay','boletimOverlay'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) fecharTool(id);
+  });
+});
+
+// ─── SNAPSHOT DIÁRIO (para tendência) ────────────────────────────────────────
+function gravarSnapshotDiario() {
+  const hoje = new Date().toISOString().slice(0,10);
+  const m = calcMetrics();
+  const snap = {
+    data: hoje,
+    total: m.t,
+    aptoA: m.aptoA, aptoB: m.aptoB, aptoC: m.aptoC,
+    lts: m.lts, rr: m.rr, reforma: m.reforma, fer: m.fer, tc: m.tc,
+    abono: m.abono,
+    armaSim: efetivo.filter(x => x.arma === 'SIM').length,
+    coleteSim: efetivo.filter(x => x.colete === 'SIM').length,
+    operacionalidade: parseFloat(m.oper),
+    ts: Date.now()
+  };
+  HISTORICO_REF.child(hoje).set(snap).catch(()=>{});
+}
+
+// ─── LOG DE ALTERAÇÕES ───────────────────────────────────────────────────────
+function registrarLog(tipo, msg, detalhes) {
+  if (!isAdmin) return; // só admin gera log
+  const entrada = {
+    tipo,                       // 'edit' | 'add' | 'del' | 'sync' | 'foto'
+    msg,                        // texto curto
+    detalhes: detalhes || '',
+    usuario: 'Admin',
+    ts: Date.now(),
+    data: new Date().toISOString()
+  };
+  LOG_REF.push(entrada).catch(()=>{});
+}
+
+// ─── TENDÊNCIA ───────────────────────────────────────────────────────────────
+let chartTendencia = null;
+
+function abrirTendencia() {
+  document.getElementById('tendenciaOverlay').classList.add('active');
+  carregarTendencia();
+}
+
+function carregarTendencia() {
+  const body = document.getElementById('tendenciaBody');
+  body.innerHTML = '<div class="tend-empty"><span class="ico">⏳</span>Carregando histórico...</div>';
+  HISTORICO_REF.orderByKey().limitToLast(30).once('value').then(snap => {
+    const dados = snap.val();
+    if (!dados || Object.keys(dados).length < 2) {
+      body.innerHTML = `<div class="tend-empty">
+        <span class="ico">📊</span>
+        <div style="font-size:.9rem;color:#e0e0e0;margin-bottom:6px">Ainda não há histórico suficiente</div>
+        <div style="font-size:.78rem">O sistema começou a gravar snapshots diários hoje.<br>Volte amanhã para ver a evolução!</div>
+        <div style="margin-top:14px;font-size:.72rem;color:#667788">Snapshot atual já registrado ✓</div>
+      </div>`;
+      gravarSnapshotDiario();
+      return;
+    }
+    const arr = Object.entries(dados).map(([k,v]) => ({...v, _key: k})).sort((a,b) => a.data.localeCompare(b.data));
+    renderTendencia(arr);
+    gravarSnapshotDiario();
+  }).catch(err => {
+    body.innerHTML = `<div class="tend-empty"><span class="ico">❌</span>Erro: ${err.message}</div>`;
+  });
+}
+
+function renderTendencia(arr) {
+  const body = document.getElementById('tendenciaBody');
+  const atual = arr[arr.length-1];
+  const prev  = arr.length > 1 ? arr[arr.length-2] : null;
+  const diff = (a,b,casas=0) => {
+    if (!prev) return '<span class="tend-eq">— início</span>';
+    const d = a - b;
+    if (Math.abs(d) < 0.05) return '<span class="tend-eq">→ Estável</span>';
+    return d > 0
+      ? `<span class="tend-up">▲ +${d.toFixed(casas)}${casas?'%':''}</span>`
+      : `<span class="tend-down">▼ ${d.toFixed(casas)}${casas?'%':''}</span>`;
+  };
+
+  const labels = arr.map(x => {
+    const d = new Date(x.data + 'T12:00:00');
+    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+  });
+  const opData = arr.map(x => x.operacionalidade);
+  const afData = arr.map(x => x.lts + x.rr + x.reforma);
+  const totalData = arr.map(x => x.total);
+
+  body.innerHTML = `
+    <div class="tend-stats">
+      <div class="tend-stat" style="--tc:#4CAF50"><div class="tv">${atual.operacionalidade.toFixed(1)}%</div><div class="tl">Operacionalidade</div><div class="td">${diff(atual.operacionalidade, prev?prev.operacionalidade:0, 1)}</div></div>
+      <div class="tend-stat" style="--tc:#2196F3"><div class="tv">${atual.total}</div><div class="tl">Efetivo Total</div><div class="td">${diff(atual.total, prev?prev.total:0)}</div></div>
+      <div class="tend-stat" style="--tc:#f44336"><div class="tv">${atual.lts+atual.rr+atual.reforma}</div><div class="tl">Afastados</div><div class="td">${diff(atual.lts+atual.rr+atual.reforma, prev?(prev.lts+prev.rr+prev.reforma):0)}</div></div>
+      <div class="tend-stat" style="--tc:#FFC107"><div class="tv">${atual.abono}</div><div class="tl">Abono</div><div class="td">${diff(atual.abono, prev?prev.abono:0)}</div></div>
+    </div>
+    <div class="tend-chart-box"><h3 style="font-size:.78rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">Operacionalidade ao longo do tempo</h3><canvas id="chartTend" style="max-height:280px"></canvas></div>
+    <div class="tend-chart-box"><h3 style="font-size:.78rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">Total de Afastados</h3><canvas id="chartAfast" style="max-height:220px"></canvas></div>
+  `;
+
+  if (chartTendencia) chartTendencia.destroy();
+  chartTendencia = new Chart(document.getElementById('chartTend'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Operacionalidade (%)', data: opData, borderColor: '#4CAF50', backgroundColor: '#4CAF5015', tension:.4, fill:true, pointRadius:4 },
+      { label: 'Efetivo Total', data: totalData, borderColor: '#2196F3', backgroundColor: '#2196F315', tension:.4, fill:false, pointRadius:3, yAxisID:'y2' }
+    ] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#e0e0e0', font:{size:11} } } },
+      scales:{
+        x:{ grid:{color:'#1e3450'}, ticks:{color:'#8899aa'} },
+        y:{ grid:{color:'#1e3450'}, ticks:{color:'#8899aa', callback:v=>v+'%'}, min:0, max:100 },
+        y2:{ position:'right', grid:{display:false}, ticks:{color:'#8899aa'} }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('chartAfast'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Afastados', data: afData, backgroundColor: '#f4433690', borderRadius:4 }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ x:{ grid:{color:'#1e3450'}, ticks:{color:'#8899aa'} }, y:{ grid:{color:'#1e3450'}, ticks:{color:'#8899aa', precision:0} } }
+    }
+  });
+}
+
+// ─── ARMAMENTO ───────────────────────────────────────────────────────────────
+function abrirArmamento() {
+  document.getElementById('armamentoOverlay').classList.add('active');
+  renderArmamento();
+}
+
+function renderArmamento() {
+  const total       = efetivo.length;
+  const armaSim     = efetivo.filter(m => m.arma === 'SIM').length;
+  const armaNao     = efetivo.filter(m => m.arma === 'NÃO' || m.arma === 'NAO').length;
+  const armaPend    = total - armaSim;
+  const coleteSim   = efetivo.filter(m => m.colete === 'SIM').length;
+  const colPend     = total - coleteSim;
+  const pct = (x) => total > 0 ? ((x/total)*100).toFixed(1) : '0';
+
+  const barraSetor = (setor, filtro) => {
+    const lista = efetivo.filter(filtro);
+    const t = lista.length;
+    if (t === 0) return '';
+    const arm = lista.filter(m => m.arma === 'SIM').length;
+    const sem = t - arm;
+    const pa = (arm/t*100).toFixed(0);
+    return `<div class="arma-row">
+      <span class="arl" style="color:${setor==='OFICIAIS'?'#FFD600':setor==='CIA'?'#2196F3':'#26C6DA'}">${setor}</span>
+      <div class="art">
+        <div class="ars-ok" style="width:${pa}%">${arm}</div>
+        <div class="ars-no" style="width:${100-pa}%">${sem||''}</div>
+      </div>
+      <span class="arv" style="color:#4CAF50">${arm}✓ <span style="color:#f44336">${sem}✗</span></span>
+    </div>`;
+  };
+
+  const barraColete = (setor, filtro) => {
+    const lista = efetivo.filter(filtro);
+    const t = lista.length;
+    if (t === 0) return '';
+    const cs = lista.filter(m => m.colete === 'SIM').length;
+    const sem = t - cs;
+    const pc = (cs/t*100).toFixed(0);
+    return `<div class="arma-row">
+      <span class="arl" style="color:${setor==='OFICIAIS'?'#FFD600':setor==='CIA'?'#2196F3':'#26C6DA'}">${setor}</span>
+      <div class="art">
+        <div class="ars-ok" style="width:${pc}%">${cs}</div>
+        <div class="ars-no" style="width:${100-pc}%">${sem||''}</div>
+      </div>
+      <span class="arv" style="color:#4CAF50">${cs}✓ <span style="color:#f44336">${sem}✗</span></span>
+    </div>`;
+  };
+
+  const pendentesArma = efetivo
+    .map((m,i) => ({...m, _idx:i}))
+    .filter(m => m.arma !== 'SIM' && getCategoria(m) === 'oper')
+    .sort((a,b) => (ORDEM_PATENTE[a.gh]||99) - (ORDEM_PATENTE[b.gh]||99));
+
+  document.getElementById('armamentoBody').innerHTML = `
+    <div class="arma-top">
+      <div class="arma-c ac-ok"><div class="av">${armaSim}</div><div class="al">Armas Acauteladas</div><div class="ap">${pct(armaSim)}% do efetivo</div></div>
+      <div class="arma-c ac-pend"><div class="av">${armaPend}</div><div class="al">Sem Arma</div><div class="ap">${pct(armaPend)}% pendente</div></div>
+      <div class="arma-c ac-cok"><div class="av">${coleteSim}</div><div class="al">Coletes Acautelados</div><div class="ap">${pct(coleteSim)}% do efetivo</div></div>
+      <div class="arma-c ac-cpend"><div class="av">${colPend}</div><div class="al">Sem Colete</div><div class="ap">${pct(colPend)}% pendente</div></div>
+    </div>
+    <div class="arma-setores">
+      <div class="arma-bloco">
+        <h4>🔫 Armas por Setor</h4>
+        ${barraSetor('OFICIAIS', isOficial)}
+        ${barraSetor('CIA', m => m.cia === 'CIA' && !isOficial(m))}
+        ${barraSetor('CCSV', isCCSV)}
+      </div>
+      <div class="arma-bloco">
+        <h4>🦺 Coletes por Setor</h4>
+        ${barraColete('OFICIAIS', isOficial)}
+        ${barraColete('CIA', m => m.cia === 'CIA' && !isOficial(m))}
+        ${barraColete('CCSV', isCCSV)}
+      </div>
+    </div>
+    ${pendentesArma.length > 0 ? `
+    <div class="arma-pend">
+      <h4>⚠️ Militares Operacionais Sem Arma (${pendentesArma.length})</h4>
+      <div class="pend-list">
+        ${pendentesArma.map(m => `
+          <div class="pend-item" onclick="editarMilitar(${m._idx});fecharTool('armamentoOverlay')">
+            <div>
+              <div class="pn">${m.nome}</div>
+              <div class="pp">${m.gh} · ${m.cia} · ${m.funcao||'—'}</div>
+            </div>
+            <span class="log-chip ch-del">SEM ARMA</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
+  `;
+}
+
+// ─── LOG DE ALTERAÇÕES ───────────────────────────────────────────────────────
+let _logFiltro = 'all';
+
+function abrirLog() {
+  document.getElementById('logOverlay').classList.add('active');
+  carregarLog();
+}
+
+function carregarLog() {
+  const body = document.getElementById('logBody');
+  body.innerHTML = '<div class="tend-empty"><span class="ico">⏳</span>Carregando log...</div>';
+  LOG_REF.orderByChild('ts').limitToLast(100).once('value').then(snap => {
+    const dados = snap.val();
+    if (!dados) {
+      body.innerHTML = `
+        <div class="log-toolbar">
+          <button class="log-fbtn on" onclick="filtrarLog('all')">Todos</button>
+          <button class="log-fbtn" onclick="filtrarLog('edit')">✏️ Edições</button>
+          <button class="log-fbtn" onclick="filtrarLog('add')">➕ Adições</button>
+          <button class="log-fbtn" onclick="filtrarLog('del')">🗑️ Exclusões</button>
+          <button class="log-fbtn" onclick="filtrarLog('foto')">📷 Fotos</button>
+        </div>
+        <div class="tend-empty"><span class="ico">📋</span>Nenhuma alteração registrada ainda.<br><small style="color:#667788">As próximas edições serão gravadas aqui.</small></div>`;
+      return;
+    }
+    const arr = Object.values(dados).sort((a,b) => b.ts - a.ts);
+    renderLog(arr);
+  });
+}
+
+function filtrarLog(tipo) {
+  _logFiltro = tipo;
+  document.querySelectorAll('.log-fbtn').forEach(b => b.classList.remove('on'));
+  event.target.classList.add('on');
+  LOG_REF.orderByChild('ts').limitToLast(100).once('value').then(snap => {
+    const dados = snap.val(); if (!dados) return;
+    const arr = Object.values(dados).sort((a,b) => b.ts - a.ts);
+    renderLog(arr);
+  });
+}
+
+function renderLog(arr) {
+  if (_logFiltro !== 'all') arr = arr.filter(l => l.tipo === _logFiltro);
+  const icones = { edit:'✏️', add:'➕', del:'🗑️', sync:'🔄', foto:'📷' };
+  const chips  = { edit:'EDIÇÃO', add:'ADIÇÃO', del:'EXCLUSÃO', sync:'SYNC', foto:'FOTO' };
+  const itensHTML = arr.map(l => {
+    const dt = new Date(l.ts);
+    const dtStr = dt.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="log-e">
+      <div class="log-i li-${l.tipo}">${icones[l.tipo]||'•'}</div>
+      <div class="log-b">
+        <div class="log-m">${l.msg}</div>
+        <div class="log-mt"><span>${dtStr}</span><span>${l.usuario||'—'}</span></div>
+      </div>
+      <span class="log-chip ch-${l.tipo}">${chips[l.tipo]||l.tipo.toUpperCase()}</span>
+    </div>`;
+  }).join('') || '<div class="tend-empty"><span class="ico">🔍</span>Nenhum registro neste filtro.</div>';
+
+  document.getElementById('logBody').innerHTML = `
+    <div class="log-toolbar">
+      <button class="log-fbtn ${_logFiltro==='all'?'on':''}" onclick="filtrarLog('all')">Todos (${arr.length})</button>
+      <button class="log-fbtn ${_logFiltro==='edit'?'on':''}" onclick="filtrarLog('edit')">✏️ Edições</button>
+      <button class="log-fbtn ${_logFiltro==='add'?'on':''}" onclick="filtrarLog('add')">➕ Adições</button>
+      <button class="log-fbtn ${_logFiltro==='del'?'on':''}" onclick="filtrarLog('del')">🗑️ Exclusões</button>
+      <button class="log-fbtn ${_logFiltro==='foto'?'on':''}" onclick="filtrarLog('foto')">📷 Fotos</button>
+      <button class="log-fbtn ${_logFiltro==='sync'?'on':''}" onclick="filtrarLog('sync')">🔄 Sync</button>
+    </div>
+    <div class="log-list">${itensHTML}</div>
+  `;
+}
+
+// ─── BOLETIM DIÁRIO ──────────────────────────────────────────────────────────
+function abrirBoletim() {
+  document.getElementById('boletimOverlay').classList.add('active');
+  renderBoletim();
+}
+
+function renderBoletim() {
+  const m = calcMetrics();
+  const hoje = new Date();
+  const dtStr = hoje.toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'}).toUpperCase();
+  const total = m.t; // sem TC
+
+  const setorStats = (filtro) => {
+    const list = efetivo.filter(filtro);
+    return {
+      total: list.length,
+      aptoA: list.filter(x => getCategoria(x) === 'oper').length,
+      aptoB: list.filter(x => getCategoria(x) === 'aptob').length,
+      aptoC: list.filter(x => getCategoria(x) === 'aptoc').length,
+      afast: list.filter(x => ['lts','reforma','agrr'].includes(getCategoria(x))).length,
+      fer:   list.filter(x => getCategoria(x) === 'ferias').length,
+    };
+  };
+  const sOf   = setorStats(isOficial);
+  const sCia  = setorStats(m => m.cia === 'CIA' && !isOficial(m));
+  const sCCSV = setorStats(isCCSV);
+
+  const oficiais = efetivo
+    .map((x,i) => ({...x, _idx:i}))
+    .filter(x => isOficial(x) && getCategoria(x) !== 'tempocerto')
+    .sort((a,b) => (ORDEM_PATENTE[a.gh]||99) - (ORDEM_PATENTE[b.gh]||99));
+
+  document.getElementById('boletimBody').innerHTML = `
+    <div class="bol-paper">
+      <div class="bol-h">
+        <div class="logo">⚔️</div>
+        <h2>Polícia Militar do Estado do Rio de Janeiro</h2>
+        <h3>Batalhão Especializado de Policiamento em Estádio — BEPE</h3>
+        <div class="dt">BOLETIM DE SITUAÇÃO DO EFETIVO — ${dtStr}</div>
+      </div>
+      <div class="bol-kpis">
+        <div class="bk bk-b"><div class="bv">${total}</div><div class="bl">Efetivo Total</div></div>
+        <div class="bk bk-g"><div class="bv">${m.aptoA}</div><div class="bl">Operacionais</div></div>
+        <div class="bk bk-a"><div class="bv">${m.aptoB+m.aptoC}</div><div class="bl">Restritos</div></div>
+        <div class="bk bk-b"><div class="bv">${m.oper}%</div><div class="bl">Operacionalidade</div></div>
+      </div>
+      <div class="bol-sec">
+        <h4>1. Distribuição Geral do Efetivo</h4>
+        <table class="bol-t">
+          <thead><tr><th>Categoria</th><th>Qtd</th><th>%</th><th>Observação</th></tr></thead>
+          <tbody>
+            <tr><td>Apto Cat A — Operacional</td><td>${m.aptoA}</td><td>${(m.aptoA/total*100).toFixed(1)}%</td><td></td></tr>
+            <tr><td>Apto Cat B — Restrito</td><td>${m.aptoB}</td><td>${(m.aptoB/total*100).toFixed(1)}%</td><td>Restrição de atividade</td></tr>
+            <tr><td>Apto Cat C — Restrito severo</td><td>${m.aptoC}</td><td>${(m.aptoC/total*100).toFixed(1)}%</td><td></td></tr>
+            <tr><td>De Férias</td><td>${m.fer}</td><td>${(m.fer/total*100).toFixed(1)}%</td><td></td></tr>
+            <tr><td>LTS — Licença Tratamento Saúde</td><td>${m.lts}</td><td>${(m.lts/total*100).toFixed(1)}%</td><td></td></tr>
+            <tr><td>Aguardando R.R</td><td>${m.rr}</td><td>${(m.rr/total*100).toFixed(1)}%</td><td></td></tr>
+            <tr><td>Ag. Reforma</td><td>${m.reforma}</td><td>${(m.reforma/total*100).toFixed(1)}%</td><td></td></tr>
+            <tr><td>Tempo Certo</td><td>${m.tc}</td><td>—</td><td>Excluído da contagem</td></tr>
+            <tr class="bol-total"><td>TOTAL</td><td>${total}</td><td>100%</td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bol-sec">
+        <h4>2. Distribuição por Setor</h4>
+        <table class="bol-t">
+          <thead><tr><th>Setor</th><th>Total</th><th>Apto A</th><th>Restritos</th><th>Afastados</th><th>Férias</th></tr></thead>
+          <tbody>
+            <tr><td>Oficiais</td><td>${sOf.total}</td><td>${sOf.aptoA}</td><td>${sOf.aptoB+sOf.aptoC}</td><td>${sOf.afast}</td><td>${sOf.fer}</td></tr>
+            <tr><td>CIA</td><td>${sCia.total}</td><td>${sCia.aptoA}</td><td>${sCia.aptoB+sCia.aptoC}</td><td>${sCia.afast}</td><td>${sCia.fer}</td></tr>
+            <tr><td>CCSV</td><td>${sCCSV.total}</td><td>${sCCSV.aptoA}</td><td>${sCCSV.aptoB+sCCSV.aptoC}</td><td>${sCCSV.afast}</td><td>${sCCSV.fer}</td></tr>
+            <tr class="bol-total"><td>TOTAL</td><td>${sOf.total+sCia.total+sCCSV.total}</td><td>${sOf.aptoA+sCia.aptoA+sCCSV.aptoA}</td><td>${sOf.aptoB+sOf.aptoC+sCia.aptoB+sCia.aptoC+sCCSV.aptoB+sCCSV.aptoC}</td><td>${sOf.afast+sCia.afast+sCCSV.afast}</td><td>${sOf.fer+sCia.fer+sCCSV.fer}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bol-sec">
+        <h4>3. Oficiais</h4>
+        <table class="bol-t">
+          <thead><tr><th>Posto</th><th>RG</th><th>Nome</th><th>Função</th><th>Situação</th></tr></thead>
+          <tbody>
+            ${oficiais.map(o => `<tr><td>${o.gh}</td><td>${o.rg||'—'}</td><td>${o.nome}</td><td>${o.funcao||'—'}</td><td>${o.sit||'—'}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="bol-assin">
+        <div class="ass">
+          <div class="nm">${oficiais.find(o => (o.funcao||'').toUpperCase().includes('CMT') && !(o.funcao||'').toUpperCase().includes('SUB'))?.gh+' '+oficiais.find(o => (o.funcao||'').toUpperCase().includes('CMT') && !(o.funcao||'').toUpperCase().includes('SUB'))?.nome || 'TEN CEL PM COMANDANTE'}</div>
+          <div class="pt">Comandante do BEPE</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── HOOKS DE LOG: registrar alterações automaticamente ─────────────────────
+// Salvar referência das funções originais
+const _origSalvarMilitar = salvarMilitar;
+const _origExcluirUm     = excluirUm;
+const _origExcluirSel    = excluirSelecionados;
+const _origSaveFoto      = saveFoto;
+const _origDeleteFoto    = deleteFoto;
+
+window.salvarMilitar = function() {
+  const ehEdicao = editingIdx >= 0;
+  const antes = ehEdicao ? {...efetivo[editingIdx]} : null;
+  _origSalvarMilitar.apply(this, arguments);
+  const depois = ehEdicao ? efetivo[editingIdx] : efetivo[efetivo.length-1];
+  if (!depois) return;
+  if (ehEdicao && antes) {
+    const mudancas = [];
+    if (antes.sit !== depois.sit)       mudancas.push(`Situação: ${antes.sit} → <strong>${depois.sit}</strong>`);
+    if (antes.gh !== depois.gh)         mudancas.push(`Patente: ${antes.gh} → <strong>${depois.gh}</strong>`);
+    if (antes.funcao !== depois.funcao) mudancas.push(`Função: ${antes.funcao} → <strong>${depois.funcao}</strong>`);
+    if (antes.arma !== depois.arma)     mudancas.push(`Arma: ${antes.arma} → <strong>${depois.arma}</strong>`);
+    if (antes.colete !== depois.colete) mudancas.push(`Colete: ${antes.colete} → <strong>${depois.colete}</strong>`);
+    if ((antes.abono||'') !== (depois.abono||'')) mudancas.push(`Abono: <strong>${depois.abono?'cadastrado':'removido'}</strong>`);
+    if (mudancas.length > 0) {
+      registrarLog('edit', `<strong>${depois.nome}</strong> — ${mudancas.join(' · ')}`);
+    }
+  } else {
+    registrarLog('add', `Novo militar: <strong>${depois.gh} ${depois.nome}</strong> — RG ${depois.rg||'—'} — ${depois.cia}`);
+  }
+};
+
+window.excluirUm = function(idx) {
+  const m = efetivo[idx];
+  const orig = window.confirm;
+  let confirmou = false;
+  window.confirm = (msg) => { confirmou = orig(msg); return confirmou; };
+  _origExcluirUm.apply(this, arguments);
+  window.confirm = orig;
+  if (confirmou && m) registrarLog('del', `Militar excluído: <strong>${m.gh} ${m.nome}</strong> — RG ${m.rg||'—'}`);
+};
+
+window.saveFoto = function(rg, base64) {
+  const r = _origSaveFoto.apply(this, arguments);
+  const mil = efetivo.find(x => x.rg === rg);
+  if (mil) registrarLog('foto', `Foto cadastrada para <strong>${mil.nome}</strong> — RG ${rg}`);
+  return r;
+};
+
+window.deleteFoto = function(rg) {
+  const r = _origDeleteFoto.apply(this, arguments);
+  const mil = efetivo.find(x => x.rg === rg);
+  if (mil) registrarLog('foto', `Foto removida de <strong>${mil.nome}</strong> — RG ${rg}`);
+  return r;
+};
+
+// Grava snapshot diário ao carregar
+setTimeout(gravarSnapshotDiario, 4000);
+
 </script>
 </body>
 </html>
