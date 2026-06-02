@@ -1216,16 +1216,44 @@ function renderStatusSection(containerId, secId, rawList, cssClass) {
 }
 
 // ─── RENDERIZAR TODAS AS SEÇÕES ──────────────────────────────────────────────
+
+// Normaliza texto: remove acentos, pontuação, espaços extras → tudo lowercase
+function normTxt(s) {
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')   // remove acentos
+    .replace(/[.\-\s]+/g, ' ')                           // pontuação vira espaço
+    .trim();
+}
+function normNum(s) {
+  return String(s||'').replace(/[^0-9]/g, '');  // só dígitos
+}
+
 function renderGradBars() {
-  const search = document.getElementById('searchInput').value.toLowerCase();
+  const raw = document.getElementById('searchInput').value;
+  const search = normTxt(raw);
+  const searchNum = normNum(raw);
+  // Divide em palavras para busca multi-termo ("CARLOS SILVA" busca quem tem AMBAS)
+  const termos = search.split(' ').filter(t => t.length > 0);
 
   const filtered = efetivo.map((m, idx) => ({ ...m, _idx: idx })).filter(m => {
-    if (!search) return true;
-    return (m.nome||'').toLowerCase().includes(search)
-      || (m.gh||'').toLowerCase().includes(search)
-      || (m.funcao||'').toLowerCase().includes(search)
-      || (m.cia||'').toLowerCase().includes(search)
-      || (m.rg||'').toLowerCase().includes(search);
+    if (termos.length === 0 && !searchNum) return true;
+
+    // Campos de texto normalizados
+    const nome   = normTxt(m.nome);
+    const gh     = normTxt(m.gh);
+    const funcao = normTxt(m.funcao);
+    const cia    = normTxt(m.cia);
+    // Campos numéricos (RG e ID — comparação só por dígitos)
+    const rgNum  = normNum(m.rg);
+    const idNum  = normNum(m.id);
+
+    // Se digitou número, casa também por RG ou ID (substring numérica)
+    if (searchNum && (rgNum.includes(searchNum) || idNum.includes(searchNum))) return true;
+
+    // TODOS os termos de texto devem casar em algum campo
+    if (termos.length === 0) return false;
+    const txtCompleto = `${nome} ${gh} ${funcao} ${cia}`;
+    return termos.every(t => txtCompleto.includes(t));
   });
 
   // Listas de GRUPO (excluem TC e Ag. R.R)
