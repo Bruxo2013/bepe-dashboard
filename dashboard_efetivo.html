@@ -1964,6 +1964,17 @@ function carregarTendencia() {
   });
 }
 
+// Agrega snapshots por mês (usa o último snapshot de cada mês)
+function agregarPorMes(arr) {
+  const meses = {};
+  arr.forEach(s => {
+    const ym = s.data.slice(0,7); // YYYY-MM
+    // Mantém o mais recente do mês
+    if (!meses[ym] || s.data > meses[ym].data) meses[ym] = s;
+  });
+  return Object.values(meses).sort((a,b) => a.data.localeCompare(b.data));
+}
+
 function renderTendencia(arr) {
   const body = document.getElementById('tendenciaBody');
   const atual = arr[arr.length-1];
@@ -1982,8 +1993,50 @@ function renderTendencia(arr) {
     return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
   });
   const opData = arr.map(x => x.operacionalidade);
-  const afData = arr.map(x => x.lts + x.rr + x.reforma);
   const totalData = arr.map(x => x.total);
+
+  // ── Agregação MENSAL para análise de afastados ──
+  const mensal = agregarPorMes(arr);
+  const enriched = mensal.map((d, i) => {
+    const afast = d.lts + d.rr + d.reforma;
+    const prevA = i > 0 ? mensal[i-1].lts + mensal[i-1].rr + mensal[i-1].reforma : null;
+    const varAbs = prevA !== null ? afast - prevA : 0;
+    const varPct = prevA !== null && prevA > 0 ? (varAbs / prevA * 100) : 0;
+    let status;
+    if (prevA === null)        status = 'eq';
+    else if (varAbs <= -2)     status = 'pos'; // queda boa
+    else if (varAbs >=  2)     status = 'neg'; // alta ruim
+    else                       status = 'eq';
+    return {...d, afast, varAbs, varPct, status, prevA};
+  });
+
+  const mesNomes = enriched.map(d => {
+    const dt = new Date(d.data + 'T12:00:00');
+    return dt.toLocaleDateString('pt-BR', {month:'short', year:'2-digit'}).replace('.','').replace(' de ','/');
+  });
+  const afastData = enriched.map(d => d.afast);
+  const corPonto = enriched.map(d => d.status === 'pos' ? '#00e676' : d.status === 'neg' ? '#ff4444' : '#7a9bbe');
+  const corBorda = enriched.map(d => d.status === 'pos' ? '#00c853' : d.status === 'neg' ? '#c62828' : '#3d5c7a');
+
+  const mediaAfast = enriched.length > 0 ? (enriched.reduce((s,d) => s+d.afast, 0) / enriched.length) : 0;
+  const picoAfast = enriched.length > 0 ? enriched.reduce((p,d) => d.afast > p.afast ? d : p, enriched[0]) : null;
+  const menorAfast = enriched.length > 0 ? enriched.reduce((p,d) => d.afast < p.afast ? d : p, enriched[0]) : null;
+  const atualAfast = enriched[enriched.length-1];
+  const prevMesAfast = enriched.length > 1 ? enriched[enriched.length-2] : null;
+
+  // Tendência: comparar média dos últimos 3 com a média dos 3 anteriores
+  let tendenciaTxt = 'Sem dados suficientes', tendenciaCor = 'eq';
+  if (enriched.length >= 4) {
+    const recent = enriched.slice(-3).reduce((s,d) => s+d.afast, 0) / 3;
+    const ant    = enriched.slice(-6, -3).reduce((s,d) => s+d.afast, 0) / Math.max(1, enriched.slice(-6,-3).length);
+    const diffT = recent - ant;
+    if      (diffT < -1) { tendenciaTxt = 'Tendência de queda'; tendenciaCor = 'up'; }
+    else if (diffT >  1) { tendenciaTxt = 'Tendência de alta';  tendenciaCor = 'down'; }
+    else                 { tendenciaTxt = 'Tendência estável';  tendenciaCor = 'eq'; }
+  }
+
+  const varAtual = prevMesAfast ? atualAfast.afast - prevMesAfast.afast : 0;
+  const varAtualPct = prevMesAfast && prevMesAfast.afast > 0 ? (varAtual/prevMesAfast.afast*100) : 0;
 
   body.innerHTML = `
     <div class="tend-stats">
@@ -1993,7 +2046,62 @@ function renderTendencia(arr) {
       <div class="tend-stat" style="--tc:#FFC107"><div class="tv">${atual.abono}</div><div class="tl">Abono</div><div class="td">${diff(atual.abono, prev?prev.abono:0)}</div></div>
     </div>
     <div class="tend-chart-box"><h3 style="font-size:.78rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">Operacionalidade ao longo do tempo</h3><canvas id="chartTend" style="max-height:280px"></canvas></div>
-    <div class="tend-chart-box"><h3 style="font-size:.78rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">Total de Afastados</h3><canvas id="chartAfast" style="max-height:220px"></canvas></div>
+
+    <!-- ANÁLISE MENSAL DE AFASTADOS -->
+    <div style="background:#1a2940;border:1px solid #1e3450;border-radius:12px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#f44336,#FF9800,#4CAF50)"></div>
+      <h3 style="font-size:.85rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;display:flex;align-items:center;gap:8px">
+        <span style="width:3px;height:14px;background:#4FC3F7;border-radius:2px"></span>📉 Análise Mensal de Afastamentos
+      </h3>
+      <div style="font-size:.7rem;color:#667788;margin-bottom:14px;margin-left:11px">Variações: 🟢 redução · 🔴 aumento · ⚪ estável (±1)</div>
+
+      <!-- KPIs específicos de afastados -->
+      <div class="tend-stats" style="margin-bottom:14px">
+        <div class="tend-stat" style="--tc:#f44336"><div class="tv">${atualAfast.afast}</div><div class="tl">Afastados Atuais</div><div class="td ${varAtual<0?'tend-up':varAtual>0?'tend-down':'tend-eq'}">${prevMesAfast?(varAtual<0?'▼ ':varAtual>0?'▲ +':'→ ')+varAtual+' ('+(varAtual<0?'':'+')+varAtualPct.toFixed(1)+'%)':'— início'}</div></div>
+        <div class="tend-stat" style="--tc:#4CAF50"><div class="tv">${mediaAfast.toFixed(1)}</div><div class="tl">Média do Período</div><div class="td tend-${tendenciaCor}">${tendenciaTxt}</div></div>
+        <div class="tend-stat" style="--tc:#FF9800"><div class="tv">${picoAfast.afast}</div><div class="tl">Pico</div><div class="td tend-eq">${mesNomes[enriched.indexOf(picoAfast)]}</div></div>
+        <div class="tend-stat" style="--tc:#2196F3"><div class="tv">${menorAfast.afast}</div><div class="tl">Menor</div><div class="td tend-eq">${mesNomes[enriched.indexOf(menorAfast)]}</div></div>
+      </div>
+
+      <!-- Gráfico semáforo -->
+      <div style="height:300px;position:relative;margin-bottom:14px"><canvas id="chartAfastMensal"></canvas></div>
+
+      <!-- Tabela detalhada -->
+      ${enriched.length > 1 ? `
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.76rem">
+        <thead><tr>
+          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Mês</th>
+          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Afastados</th>
+          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">LTS</th>
+          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Ag. R.R</th>
+          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Reforma</th>
+          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Variação</th>
+          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Status</th>
+        </tr></thead>
+        <tbody>
+        ${enriched.map((d, i) => {
+          const sinal = d.varAbs >= 0 ? '+' : '';
+          const cls = d.status === 'pos' ? 'pos' : d.status === 'neg' ? 'neg' : 'eq';
+          const cor = cls === 'pos' ? '#00e676' : cls === 'neg' ? '#ff4444' : '#8899aa';
+          const bg  = cls === 'pos' ? '#00e67615' : cls === 'neg' ? '#ff444415' : '#1e3450';
+          const lbl = cls === 'pos' ? '↓ POSITIVA' : cls === 'neg' ? '↑ NEGATIVA' : '→ ESTÁTICA';
+          const varTxt = d.prevA === null ? '<span style="color:#667788">—</span>'
+            : `<span style="color:${d.varAbs>0?'#ff4444':d.varAbs<0?'#00e676':'#8899aa'};font-weight:700">${sinal}${d.varAbs} (${sinal}${d.varPct.toFixed(1)}%)</span>`;
+          return `<tr style="border-bottom:1px solid #1e3450">
+            <td style="padding:7px 10px;font-weight:600">${mesNomes[i]}</td>
+            <td style="padding:7px 10px;font-weight:700;color:#ff6e6e">${d.afast}</td>
+            <td style="padding:7px 10px">${d.lts}</td>
+            <td style="padding:7px 10px">${d.rr}</td>
+            <td style="padding:7px 10px">${d.reforma}</td>
+            <td style="padding:7px 10px">${varTxt}</td>
+            <td style="padding:7px 10px"><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:.68rem;font-weight:700;background:${bg};color:${cor};border:1px solid ${cor}40">${lbl}</span></td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+      </div>` : ''}
+    </div>
   `;
 
   if (chartTendencia) chartTendencia.destroy();
@@ -2013,12 +2121,71 @@ function renderTendencia(arr) {
     }
   });
 
-  new Chart(document.getElementById('chartAfast'), {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'Afastados', data: afData, backgroundColor: '#f4433690', borderRadius:4 }] },
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false } },
-      scales:{ x:{ grid:{color:'#1e3450'}, ticks:{color:'#8899aa'} }, y:{ grid:{color:'#1e3450'}, ticks:{color:'#8899aa', precision:0} } }
+  // Gráfico semáforo de afastados mensais
+  const canvas = document.getElementById('chartAfastMensal');
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 300);
+  grad.addColorStop(0, '#ff444450');
+  grad.addColorStop(0.5, '#ff444420');
+  grad.addColorStop(1, '#ff444405');
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: mesNomes,
+      datasets: [
+        {
+          label: 'Afastados',
+          data: afastData,
+          borderColor: '#ff6e6e',
+          backgroundColor: grad,
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2.5,
+          pointBackgroundColor: corPonto,
+          pointBorderColor: corBorda,
+          pointBorderWidth: 2,
+          pointRadius: 7,
+          pointHoverRadius: 10
+        },
+        {
+          label: 'Média (' + mediaAfast.toFixed(1) + ')',
+          data: enriched.map(() => mediaAfast),
+          borderColor: '#ffb30090',
+          borderDash: [6, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { labels:{color:'#e0e0e0', font:{size:11}, padding:12, usePointStyle:true} },
+        tooltip: {
+          backgroundColor:'#0c1622', borderColor:'#243f5a', borderWidth:1,
+          titleColor:'#00d4ff', bodyColor:'#d4e0ef', padding:12,
+          callbacks: {
+            afterBody: (items) => {
+              const i = items[0].dataIndex;
+              const d = enriched[i];
+              if (!d || d.prevA === null) return ['Mês inicial — sem comparação'];
+              const sinal = d.varAbs >= 0 ? '+' : '';
+              const status = d.status === 'pos' ? '🟢 Queda significativa'
+                           : d.status === 'neg' ? '🔴 Aumento preocupante'
+                           : '⚪ Variação estável';
+              return [`Variação: ${sinal}${d.varAbs} (${sinal}${d.varPct.toFixed(1)}%)`, status];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid:{color:'#1e3450'}, ticks:{color:'#8899aa', font:{size:10}} },
+        y: { grid:{color:'#1e3450'}, ticks:{color:'#8899aa', precision:0}, beginAtZero:true }
+      }
     }
   });
 }
