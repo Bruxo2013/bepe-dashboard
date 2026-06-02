@@ -460,7 +460,7 @@ body.view-mode .edit-only{display:none !important}
 <div class="toolbar">
   <button class="btn btn-primary edit-only" onclick="openAddModal()">+ Adicionar Militar</button>
   <button class="btn btn-danger edit-only" id="btnExcluir" onclick="excluirSelecionados()" style="display:none">Excluir Selecionados (<span id="selCount">0</span>)</button>
-  <input type="text" class="search" id="searchInput" placeholder="Buscar por nome, patente, função..." oninput="renderGradBars()">
+  <input type="text" class="search" id="searchInput" placeholder="Buscar por nome, patente, função..." oninput="onBuscar()">
   <button class="btn btn-outline" onclick="exportarCSV()">📄 CSV</button>
   <button class="btn btn-outline btn-excel" onclick="exportarExcel()">📊 Excel</button>
   <button class="btn btn-success edit-only" onclick="abrirCompartilhar()">&#128279; Compartilhar</button>
@@ -1508,6 +1508,55 @@ function irPara(id) {
 }
 
 function hasSearch() { return document.getElementById('searchInput').value.trim().length > 0; }
+
+// Busca com auto-scroll
+let _scrollBuscaTimer;
+function onBuscar() {
+  renderGradBars();
+  clearTimeout(_scrollBuscaTimer);
+  _scrollBuscaTimer = setTimeout(() => {
+    const termo = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!termo) return;
+
+    // Procurar primeira LINHA <tr> de resultado dentro das tabelas das grad-bars
+    const todasBarras = document.querySelectorAll('.grad-bar');
+    let primeiraLinha = null;
+    let primeiraBarra = null;
+
+    for (const bar of todasBarras) {
+      // Se a seção pai estiver oculta, pula
+      const sec = bar.closest('.grad-section');
+      if (sec && sec.style.display === 'none') continue;
+      const linhas = bar.querySelectorAll('tbody tr');
+      if (linhas.length > 0) {
+        primeiraLinha = linhas[0];
+        primeiraBarra = bar;
+        break;
+      }
+    }
+
+    if (!primeiraLinha) return;
+
+    // Garantir que a barra esteja aberta
+    const body   = primeiraBarra.querySelector('.grad-bar-body');
+    const header = primeiraBarra.querySelector('.grad-bar-header');
+    if (body && !body.classList.contains('open')) {
+      body.classList.add('open');
+      if (header) header.classList.add('active');
+    }
+    if (body) loadFotosVisiveis(body);
+
+    // Rolar até a linha do primeiro resultado
+    setTimeout(() => {
+      const y = primeiraLinha.getBoundingClientRect().top + window.scrollY - 120;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+      // Destacar a linha
+      primeiraLinha.style.transition = 'background .4s';
+      primeiraLinha.style.background = '#2196F340';
+      setTimeout(() => { primeiraLinha.style.background = ''; }, 2000);
+    }, 80);
+  }, 350); // espera o usuário parar de digitar
+}
 
 // ─── REFRESH ─────────────────────────────────────────────────────────────────
 function refreshAll() {
