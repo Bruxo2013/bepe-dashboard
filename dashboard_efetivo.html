@@ -274,9 +274,64 @@ body.view-mode .edit-only{display:none !important}
   .modo-badge{font-size:.6rem;padding:3px 8px;display:block;margin:4px 0 0 0}
   .foto-avatar{width:28px;height:28px}
 }
+
+/* ─── ALERTAS LTS VENCENDO ─── */
+.alerta-bell{position:fixed;top:14px;right:20px;z-index:90;cursor:pointer;background:#1a2940;border:1px solid #1e3450;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all .2s}
+.alerta-bell:hover{border-color:#f44336;box-shadow:0 0 12px #f4433640}
+.alerta-bell .alerta-badge{position:absolute;top:-4px;right:-4px;background:#f44336;color:#fff;font-size:.62rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;animation:pulse-bell 2s infinite}
+@keyframes pulse-bell{0%,100%{box-shadow:0 0 0 0 #f4433660}50%{box-shadow:0 0 0 6px #f4433600}}
+.alerta-bell.empty{opacity:.4}
+.alerta-bell.empty .alerta-badge{display:none}
+
+.alerta-panel{position:fixed;top:64px;right:20px;width:380px;max-width:calc(100vw - 40px);max-height:70vh;background:#1a2940;border:1px solid #f4433640;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.6);z-index:95;display:none;flex-direction:column;overflow:hidden}
+.alerta-panel.show{display:flex}
+.alerta-panel-head{padding:14px 18px;background:linear-gradient(135deg,#f4433620,#1a2940);border-bottom:1px solid #f4433630;display:flex;align-items:center;gap:10px}
+.alerta-panel-head h3{font-size:.85rem;color:#f44336;font-weight:700;letter-spacing:.5px;flex:1}
+.alerta-panel-head .close-x{background:none;border:none;color:#8899aa;font-size:1.3rem;cursor:pointer;line-height:1}
+.alerta-panel-head .close-x:hover{color:#fff}
+.alerta-panel-body{overflow-y:auto;padding:8px}
+.alerta-panel-body::-webkit-scrollbar{width:6px}
+.alerta-panel-body::-webkit-scrollbar-thumb{background:#1e3450;border-radius:3px}
+.alerta-empty{padding:30px 20px;text-align:center;color:#8899aa;font-size:.85rem}
+.alerta-empty .emoji{font-size:2rem;display:block;margin-bottom:8px}
+
+.alerta-group{margin-bottom:8px}
+.alerta-group-title{font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;padding:6px 10px;border-radius:4px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.alerta-group-title.critico{background:#f4433620;color:#f44336}
+.alerta-group-title.aviso{background:#FF980020;color:#FF9800}
+.alerta-group-title.info{background:#2196F320;color:#2196F3}
+.alerta-mil{background:#0d1b2a;border-radius:6px;padding:10px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;cursor:pointer;border-left:3px solid transparent;transition:all .2s}
+.alerta-mil:hover{border-left-color:#2196F3;background:#1e3450}
+.alerta-mil .mil-info{flex:1;min-width:0}
+.alerta-mil .mil-nome{font-size:.78rem;font-weight:600;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alerta-mil .mil-meta{font-size:.65rem;color:#667788;margin-top:2px}
+.alerta-mil .mil-dias{font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:4px;white-space:nowrap}
+.mil-dias.critico{background:#f4433620;color:#f44336}
+.mil-dias.aviso{background:#FF980020;color:#FF9800}
+.mil-dias.info{background:#2196F320;color:#2196F3}
+
+@media(max-width:600px){
+  .alerta-bell{top:auto;bottom:20px;right:14px;width:48px;height:48px;font-size:1.4rem;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  .alerta-panel{top:auto;bottom:80px;right:14px;left:14px;width:auto;max-height:60vh}
+}
 </style>
 </head>
 <body>
+
+<!-- Sino de Alertas LTS -->
+<div class="alerta-bell empty" id="alertaBell" onclick="toggleAlertaPanel()" title="Alertas de LTS">
+  🚨
+  <span class="alerta-badge" id="alertaBadge">0</span>
+</div>
+
+<!-- Painel de Alertas -->
+<div class="alerta-panel" id="alertaPanel">
+  <div class="alerta-panel-head">
+    <h3>🚨 LTS Vencendo</h3>
+    <button class="close-x" onclick="toggleAlertaPanel()">×</button>
+  </div>
+  <div class="alerta-panel-body" id="alertaPanelBody"></div>
+</div>
 
 <div class="header">
   <h1><span>DASHBOARD</span> DO EFETIVO — BEPE <span id="modoBadge"></span></h1>
@@ -1295,12 +1350,141 @@ function refreshAll() {
   renderCharts(m);
   renderSetorCharts();
   renderGradBars();
+  renderAlertasLTS();
   updateSelection();
   // Carregar fotos de barras que já estão abertas (ex: busca ativa)
   requestAnimationFrame(() => {
     document.querySelectorAll('.grad-bar-body.open').forEach(body => loadFotosVisiveis(body));
   });
 }
+
+// ─── ALERTAS LTS VENCENDO ────────────────────────────────────────────────────
+function parseDataBR(str) {
+  if (!str) return null;
+  str = String(str).trim();
+  // Formato "Sat Jun 06 2026 04:00:00 GMT-0300..." (vindo do Google Sheets)
+  if (str.includes('GMT') || /^[A-Za-z]{3} [A-Za-z]{3} \d{1,2} \d{4}/.test(str)) {
+    const d = new Date(str);
+    if (!isNaN(d)) { d.setHours(0,0,0,0); return d; }
+  }
+  // ISO yyyy-mm-dd
+  let m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  // BR dd/mm/yyyy
+  m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (m) {
+    let ano = +m[3]; if (ano < 100) ano += 2000;
+    return new Date(ano, +m[2]-1, +m[1]);
+  }
+  return null;
+}
+
+function calcAlertasLTS() {
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const alertas = { vencido: [], critico: [], aviso: [], info: [] };
+
+  efetivo.forEach((mil, idx) => {
+    const cat = getCategoria(mil);
+    if (cat !== 'lts') return;
+    const dt = parseDataBR(mil.ate);
+    if (!dt) return;
+    const diff = Math.round((dt - hoje) / (1000*60*60*24));
+    const item = { ...mil, _idx: idx, _dias: diff, _data: dt };
+    if      (diff < 0)   alertas.vencido.push(item);
+    else if (diff <= 7)  alertas.critico.push(item);
+    else if (diff <= 15) alertas.aviso.push(item);
+    else if (diff <= 30) alertas.info.push(item);
+  });
+
+  // Ordenar do mais urgente para o menos
+  Object.keys(alertas).forEach(k => alertas[k].sort((a,b) => a._dias - b._dias));
+  return alertas;
+}
+
+function renderAlertasLTS() {
+  const a = calcAlertasLTS();
+  const total = a.vencido.length + a.critico.length + a.aviso.length + a.info.length;
+  const bell  = document.getElementById('alertaBell');
+  const badge = document.getElementById('alertaBadge');
+  const body  = document.getElementById('alertaPanelBody');
+  if (!bell || !badge || !body) return;
+
+  badge.textContent = total;
+  if (total === 0) { bell.classList.add('empty'); }
+  else             { bell.classList.remove('empty'); }
+
+  const fmtDt = d => d.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }).toUpperCase();
+  const dataDe = d => `Vence ${fmtDt(d)}`;
+  const grupo = (titulo, classe, lista) => {
+    if (lista.length === 0) return '';
+    return `<div class="alerta-group">
+      <div class="alerta-group-title ${classe}">${titulo} (${lista.length})</div>
+      ${lista.map(m => `
+        <div class="alerta-mil" onclick="irParaMilitar('${m.rg}')">
+          <div class="mil-info">
+            <div class="mil-nome">${m.gh} ${m.nome}</div>
+            <div class="mil-meta">${m.cia} · ${m.funcao || 'LTS'}</div>
+          </div>
+          <span class="mil-dias ${classe}">${m._dias < 0 ? Math.abs(m._dias)+' dias vencido' : m._dias === 0 ? 'VENCE HOJE' : dataDe(m._data)}</span>
+        </div>
+      `).join('')}
+    </div>`;
+  };
+
+  let html = '';
+  html += grupo('🔴 Já vencidas',              'critico', a.vencido);
+  html += grupo('🔴 Vencendo em até 7 dias',   'critico', a.critico);
+  html += grupo('🟠 Vencendo em até 15 dias',  'aviso',   a.aviso);
+  html += grupo('🔵 Vencendo em até 30 dias',  'info',    a.info);
+
+  if (total === 0) {
+    html = '<div class="alerta-empty"><span class="emoji">✅</span>Nenhum LTS vencendo nos próximos 30 dias</div>';
+  }
+  body.innerHTML = html;
+}
+
+function toggleAlertaPanel() {
+  const panel = document.getElementById('alertaPanel');
+  panel.classList.toggle('show');
+}
+
+function irParaMilitar(rg) {
+  toggleAlertaPanel();
+  const sec = document.getElementById('secLTS');
+  if (!sec) return;
+  // Abrir todas as barras LTS e rolar
+  sec.style.display = 'block';
+  sec.querySelectorAll('.grad-bar-body').forEach(b => {
+    b.classList.add('open');
+    const h = b.previousElementSibling;
+    if (h) h.classList.add('active');
+    loadFotosVisiveis(b);
+  });
+  setTimeout(() => {
+    const linha = document.querySelector(`.alerta-mil[onclick*="'${rg}'"]`);
+    sec.scrollIntoView({ behavior:'smooth', block:'start' });
+    // Destacar o militar específico
+    const img = document.querySelector(`.foto-row[data-rg="${rg}"]`);
+    if (img) {
+      const tr = img.closest('tr');
+      if (tr) {
+        tr.style.transition = 'background .4s';
+        tr.style.background = '#2196F340';
+        setTimeout(() => { tr.style.background = ''; }, 2500);
+      }
+    }
+  }, 100);
+}
+
+// Fecha painel ao clicar fora
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('alertaPanel');
+  const bell  = document.getElementById('alertaBell');
+  if (panel && panel.classList.contains('show') && !panel.contains(e.target) && !bell.contains(e.target)) {
+    panel.classList.remove('show');
+  }
+});
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 document.getElementById('headerDate').textContent =
