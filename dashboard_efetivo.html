@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Efetivo - BEPE</title>
+<meta name="description" content="Dashboard de gestão do efetivo — Batalhão Especializado de Policiamento em Estádio (BEPE/PMERJ)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a2940'/%3E%3Cpath d='M32 8l20 8v14c0 12-8 22-20 26C20 52 12 42 12 30V16z' fill='%232196F3'/%3E%3Cpath d='M32 14l14 5.6V30c0 8.4-5.6 15.4-14 18.2C23.6 45.4 18 38.4 18 30v-10.4z' fill='%230d1b2a'/%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="efetivo_data.js"></script>
@@ -324,7 +326,7 @@ body.view-mode .edit-only{display:none !important}
 .grad-section h3 .sec-pill{margin-left:auto;background:#2196F320;color:#2196F3;padding:2px 10px;border-radius:10px;font-size:.7rem;font-weight:700;letter-spacing:.5px}
 .grad-section h3{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .grad-section h3 > span:not(.sec-chevron):not(.sec-pill){flex:1;display:inline-flex;align-items:center;gap:6px}
-.grad-section-content{max-height:5000px;overflow:hidden;transition:max-height .4s ease,opacity .25s ease;opacity:1}
+.grad-section-content{max-height:30000px;overflow:hidden;transition:max-height .4s ease,opacity .25s ease;opacity:1}
 .grad-section-content.collapsed{max-height:0;opacity:0}
 
 /* ─── MODAL TOOLS (Tendência/Armamento/Log/Boletim) ─── */
@@ -412,7 +414,7 @@ body.view-mode .edit-only{display:none !important}
 .bk-a{border-color:#ff9800}.bk-a .bv{color:#e65100}
 .bk-r{border-color:#f44336}.bk-r .bv{color:#b71c1c}
 .bk-b{border-color:#1976d2}.bk-b .bv{color:#1565c0}
-.bol-sec{margin-bottom:14px}
+.bol-sec{margin-bottom:14px;overflow-x:auto}
 .bol-sec h4{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #999;padding-bottom:4px;margin-bottom:8px;color:#111}
 .bol-t{width:100%;border-collapse:collapse;font-size:.74rem}
 .bol-t th{background:#eee;padding:5px 8px;text-align:left;font-weight:700;border:1px solid #ccc;color:#111}
@@ -873,7 +875,11 @@ function loadData() {
     const data = snapshot.val();
     if (data) {
       let arr = Array.isArray(data) ? data : Object.values(data);
-      arr = arr.filter(m => m && typeof m === 'object' && m.nome && m.funcao && m.sit);
+      // Fidelidade à planilha: exigir apenas registro válido com nome.
+      // Função/situação em branco na planilha NÃO podem derrubar o militar.
+      arr = arr.filter(m => m && typeof m === 'object' && m.nome);
+      // Garantir campos string para o restante do código não quebrar
+      arr = arr.map(m => ({ gh:'', rg:'', id:'', cia:'', funcao:'', sit:'', de:'', ate:'', arma:'', colete:'', ferias:'', abono:'', obs:'', ...m }));
       if (arr.length > 0) {
         const newJSON = JSON.stringify(arr);
         if (newJSON !== JSON.stringify(efetivo)) {
@@ -883,6 +889,11 @@ function loadData() {
           refreshAll();
           showToast('🔄 Dados atualizados em tempo real!', 'info');
         }
+        // Registrar horário real da última sincronização no cabeçalho
+        const hd = document.getElementById('headerDate');
+        if (hd) hd.textContent =
+          new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase()
+          + ' — Sincronizado às ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
         firebaseReady = true;
       }
     } else {
@@ -1543,8 +1554,19 @@ function showToast(msg, type) {
 function irPara(id) {
   const el = document.getElementById(id);
   if (!el) return;
+  // Se a seção estiver colapsada, expandir antes de rolar
+  expandirSecao(el);
   const y = el.getBoundingClientRect().top + window.scrollY - 80;
   window.scrollTo({ top: y, behavior: 'smooth' });
+}
+
+// Expande uma seção colapsável (sem alterar o estado salvo das demais)
+function expandirSecao(sec) {
+  if (!sec || !sec.classList || !sec.classList.contains('grad-section')) return;
+  const h3   = sec.querySelector('h3');
+  const wrap = sec.querySelector('.grad-section-content');
+  if (h3)   h3.classList.remove('sec-collapsed');
+  if (wrap) wrap.classList.remove('collapsed');
 }
 
 function hasSearch() { return document.getElementById('searchInput').value.trim().length > 0; }
@@ -1709,6 +1731,7 @@ function irParaMilitar(rg) {
   const sec = document.getElementById('secLTS');
   if (!sec) return;
   sec.style.display = 'block';
+  expandirSecao(sec);
 
   // Fechar TODAS as barras de TODAS as seções primeiro
   document.querySelectorAll('.grad-bar-body.open').forEach(b => {
@@ -1718,8 +1741,10 @@ function irParaMilitar(rg) {
   });
 
   setTimeout(() => {
-    // Encontrar a foto do militar (cada barra tem só uma patente)
-    const img = document.querySelector(`.foto-row[data-rg="${rg}"]`);
+    // Encontrar a foto do militar DENTRO da seção LTS — ele também aparece
+    // na seção do seu grupo (Tropa/CCSV), que vem antes no DOM
+    const img = sec.querySelector(`.foto-row[data-rg="${rg}"]`)
+             || document.querySelector(`.foto-row[data-rg="${rg}"]`);
     if (!img) {
       sec.scrollIntoView({ behavior:'smooth', block:'start' });
       return;
@@ -1838,6 +1863,19 @@ window.refreshAll = function() {
   setupSecoesColapsaveis();
   atualizarPillsSecoes();
 };
+
+// Pills e auto-expansão também na busca (onBuscar chama renderGradBars direto,
+// sem passar pelo refreshAll)
+const _origRenderGradBars2 = renderGradBars;
+window.renderGradBars = function() {
+  _origRenderGradBars2.apply(this, arguments);
+  atualizarPillsSecoes();
+};
+
+// O refreshAll do boot rodou ANTES desta sobrescrita — configurar agora,
+// senão as seções só ficam clicáveis após a primeira sync do Firebase.
+setupSecoesColapsaveis();
+atualizarPillsSecoes();
 
 // Fecha painel ao clicar fora
 document.addEventListener('click', (e) => {
@@ -2025,6 +2063,7 @@ function registrarLog(tipo, msg, detalhes) {
 
 // ─── TENDÊNCIA ───────────────────────────────────────────────────────────────
 let chartTendencia = null;
+let chartAfastMensalObj = null;
 
 function abrirTendencia() {
   document.getElementById('tendenciaOverlay').classList.add('active');
@@ -2067,6 +2106,15 @@ function agregarPorMes(arr) {
 
 function renderTendencia(arr) {
   const body = document.getElementById('tendenciaBody');
+  // Sanitizar snapshots: campos numéricos podem ter sido gravados como string
+  // por versões anteriores — coagir tudo para número evita quebrar .toFixed()
+  arr = arr.map(s => ({
+    ...s,
+    total: +s.total || 0, aptoA: +s.aptoA || 0, aptoB: +s.aptoB || 0, aptoC: +s.aptoC || 0,
+    lts: +s.lts || 0, rr: +s.rr || 0, reforma: +s.reforma || 0,
+    fer: +s.fer || 0, tc: +s.tc || 0, abono: +s.abono || 0,
+    operacionalidade: +s.operacionalidade || 0
+  }));
   const atual = arr[arr.length-1];
   const prev  = arr.length > 1 ? arr[arr.length-2] : null;
   const diff = (a,b,casas=0) => {
@@ -2219,7 +2267,8 @@ function renderTendencia(arr) {
   grad.addColorStop(0.5, '#ff444420');
   grad.addColorStop(1, '#ff444405');
 
-  new Chart(ctx, {
+  if (chartAfastMensalObj) chartAfastMensalObj.destroy();
+  chartAfastMensalObj = new Chart(ctx, {
     type: 'line',
     data: {
       labels: mesNomes,
@@ -2360,7 +2409,7 @@ function renderArmamento() {
       <h4>⚠️ Militares Operacionais Sem Arma (${pendentesArma.length})</h4>
       <div class="pend-list">
         ${pendentesArma.map(m => `
-          <div class="pend-item" onclick="editarMilitar(${m._idx});fecharTool('armamentoOverlay')">
+          <div class="pend-item" ${isAdmin ? `onclick="editarMilitar(${m._idx});fecharTool('armamentoOverlay')"` : 'style="cursor:default"'}>
             <div>
               <div class="pn">${m.nome}</div>
               <div class="pp">${m.gh} · ${m.cia} · ${m.funcao||'—'}</div>
@@ -2405,8 +2454,7 @@ function carregarLog() {
 
 function filtrarLog(tipo) {
   _logFiltro = tipo;
-  document.querySelectorAll('.log-fbtn').forEach(b => b.classList.remove('on'));
-  event.target.classList.add('on');
+  // renderLog reconstrói a toolbar com a classe "on" correta — sem depender de window.event
   LOG_REF.orderByChild('ts').limitToLast(100).once('value').then(snap => {
     const dados = snap.val(); if (!dados) return;
     const arr = Object.values(dados).sort((a,b) => b.ts - a.ts);
@@ -2414,8 +2462,9 @@ function filtrarLog(tipo) {
   });
 }
 
-function renderLog(arr) {
-  if (_logFiltro !== 'all') arr = arr.filter(l => l.tipo === _logFiltro);
+function renderLog(arrCompleto) {
+  const totalGeral = arrCompleto.length;
+  const arr = _logFiltro === 'all' ? arrCompleto : arrCompleto.filter(l => l.tipo === _logFiltro);
   const icones = { edit:'✏️', add:'➕', del:'🗑️', sync:'🔄', foto:'📷' };
   const chips  = { edit:'EDIÇÃO', add:'ADIÇÃO', del:'EXCLUSÃO', sync:'SYNC', foto:'FOTO' };
   const itensHTML = arr.map(l => {
@@ -2433,7 +2482,7 @@ function renderLog(arr) {
 
   document.getElementById('logBody').innerHTML = `
     <div class="log-toolbar">
-      <button class="log-fbtn ${_logFiltro==='all'?'on':''}" onclick="filtrarLog('all')">Todos (${arr.length})</button>
+      <button class="log-fbtn ${_logFiltro==='all'?'on':''}" onclick="filtrarLog('all')">Todos (${totalGeral})</button>
       <button class="log-fbtn ${_logFiltro==='edit'?'on':''}" onclick="filtrarLog('edit')">✏️ Edições</button>
       <button class="log-fbtn ${_logFiltro==='add'?'on':''}" onclick="filtrarLog('add')">➕ Adições</button>
       <button class="log-fbtn ${_logFiltro==='del'?'on':''}" onclick="filtrarLog('del')">🗑️ Exclusões</button>
@@ -2475,6 +2524,10 @@ function renderBoletim() {
     .map((x,i) => ({...x, _idx:i}))
     .filter(x => isOficial(x) && getCategoria(x) !== 'tempocerto')
     .sort((a,b) => (ORDEM_PATENTE[a.gh]||99) - (ORDEM_PATENTE[b.gh]||99));
+
+  // Comandante para a assinatura: função CMT (excluindo SUBCMT)
+  const cmt = oficiais.find(o => (o.funcao||'').toUpperCase().includes('CMT') && !(o.funcao||'').toUpperCase().includes('SUB'));
+  const assinatura = cmt ? `${cmt.gh} ${cmt.nome}` : 'COMANDANTE DO BEPE';
 
   document.getElementById('boletimBody').innerHTML = `
     <div class="bol-paper">
@@ -2530,7 +2583,7 @@ function renderBoletim() {
       </div>
       <div class="bol-assin">
         <div class="ass">
-          <div class="nm">${oficiais.find(o => (o.funcao||'').toUpperCase().includes('CMT') && !(o.funcao||'').toUpperCase().includes('SUB'))?.gh+' '+oficiais.find(o => (o.funcao||'').toUpperCase().includes('CMT') && !(o.funcao||'').toUpperCase().includes('SUB'))?.nome || 'TEN CEL PM COMANDANTE'}</div>
+          <div class="nm">${assinatura}</div>
           <div class="pt">Comandante do BEPE</div>
         </div>
       </div>
@@ -2547,11 +2600,30 @@ const _origSaveFoto      = saveFoto;
 const _origDeleteFoto    = deleteFoto;
 
 window.salvarMilitar = function() {
+  // Snapshot ANTES de salvar: o array é reordenado pelo sort, então não
+  // podemos confiar nos índices depois — lemos os valores direto do formulário.
   const ehEdicao = editingIdx >= 0;
-  const antes = ehEdicao ? {...efetivo[editingIdx]} : null;
+  const antes    = ehEdicao && efetivo[editingIdx] ? {...efetivo[editingIdx]} : null;
+  const lenAntes = efetivo.length;
+
   _origSalvarMilitar.apply(this, arguments);
-  const depois = ehEdicao ? efetivo[editingIdx] : efetivo[efetivo.length-1];
-  if (!depois) return;
+
+  // Se o modal continua aberto, a validação falhou — nada foi salvo.
+  if (document.getElementById('modalOverlay').classList.contains('active')) return;
+
+  // Valores salvos = o que está nos campos do formulário
+  const depois = {
+    gh:     document.getElementById('fGh').value,
+    nome:   document.getElementById('fNome').value.trim().toUpperCase(),
+    rg:     document.getElementById('fRg').value.trim(),
+    cia:    document.getElementById('fCia').value,
+    funcao: document.getElementById('fFuncao').value.trim().toUpperCase(),
+    sit:    document.getElementById('fSit').value,
+    arma:   document.getElementById('fArma').value,
+    colete: document.getElementById('fColete').value,
+    abono:  document.getElementById('fAbono').value
+  };
+
   if (ehEdicao && antes) {
     const mudancas = [];
     if (antes.sit !== depois.sit)       mudancas.push(`Situação: ${antes.sit} → <strong>${depois.sit}</strong>`);
@@ -2563,7 +2635,7 @@ window.salvarMilitar = function() {
     if (mudancas.length > 0) {
       registrarLog('edit', `<strong>${depois.nome}</strong> — ${mudancas.join(' · ')}`);
     }
-  } else {
+  } else if (efetivo.length > lenAntes) {
     registrarLog('add', `Novo militar: <strong>${depois.gh} ${depois.nome}</strong> — RG ${depois.rg||'—'} — ${depois.cia}`);
   }
 };
@@ -2576,6 +2648,22 @@ window.excluirUm = function(idx) {
   _origExcluirUm.apply(this, arguments);
   window.confirm = orig;
   if (confirmou && m) registrarLog('del', `Militar excluído: <strong>${m.gh} ${m.nome}</strong> — RG ${m.rg||'—'}`);
+};
+
+window.excluirSelecionados = function() {
+  // Capturar quem está selecionado ANTES da exclusão (índices ficam inválidos depois)
+  const selecionados = [...document.querySelectorAll('.row-cb:checked')]
+    .map(cb => efetivo[parseInt(cb.dataset.idx)])
+    .filter(Boolean);
+  const orig = window.confirm;
+  let confirmou = false;
+  window.confirm = (msg) => { confirmou = orig(msg); return confirmou; };
+  _origExcluirSel.apply(this, arguments);
+  window.confirm = orig;
+  if (confirmou && selecionados.length > 0) {
+    const nomes = selecionados.map(m => `${m.gh} ${m.nome}`).join(', ');
+    registrarLog('del', `Exclusão em lote (<strong>${selecionados.length}</strong>): ${nomes}`);
+  }
 };
 
 window.saveFoto = function(rg, base64) {
