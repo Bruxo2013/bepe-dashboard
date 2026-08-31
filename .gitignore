@@ -1,0 +1,19 @@
+# Cache do Python
+__pycache__/
+*.py[cod]
+
+# Dependencias do Node (foto3d)
+node_modules/
+
+# Arquivos do sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Configuracao local do Claude Code
+.claude/settings.local.json
+
+# Rascunhos de experimento visual. Contem ~40 nomes reais de militares e nao
+# tem funcao no projeto -- versionar publicaria dado pessoal que hoje nao esta
+# exposto. Os arquivos continuam no disco, apenas fora do git.
+previews/

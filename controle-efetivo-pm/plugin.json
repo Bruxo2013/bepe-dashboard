@@ -1,0 +1,23 @@
+{
+  "name": "controle-efetivo-pm",
+  "displayName": "Controle de Efetivo PM",
+  "description": "Plugin para gestão e visualização do efetivo da Polícia Militar - BEPE. Permite gerar dashboards visuais, relatórios estruturados e alertas automáticos a partir da planilha de efetivo.",
+  "version": "1.0.0",
+  "skills": [
+    {
+      "name": "dashboard",
+      "description": "Dashboard visual em tempo real do efetivo PM. Mostra números totais (efetivo, disponíveis, afastados), distribuição por patente, alocação por setor e situação sanitária. Use quando o usuário pedir dashboard, painel, visão geral, resumo visual ou status do efetivo.",
+      "path": "skills/dashboard.md"
+    },
+    {
+      "name": "relatorio-efetivo",
+      "description": "Relatório estruturado completo do efetivo PM. Gera documento com resumo executivo, distribuição por patente, alocação por setor, lista de afastados, pendências de férias e estatísticas. Use quando o usuário pedir relatório, report, documento do efetivo ou análise detalhada.",
+      "path": "skills/relatorio-efetivo.md"
+    },
+    {
+      "name": "alertas-efetivo",
+      "description": "Sistema de alertas automáticos do efetivo PM. Analisa dados e gera alertas críticos (falta de pessoal), avisos (licenças vencendo), atenções (férias pendentes acumuladas) e informações (tendências). Use quando o usuário pedir alertas, avisos, problemas, pendências ou situações críticas.",
+      "path": "skills/alertas-efetivo.md"
+    }
+  ]
+}

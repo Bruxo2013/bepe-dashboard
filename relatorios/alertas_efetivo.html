@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alertas do Efetivo - BEPE</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+.header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.header h1{font-size:1.4rem;letter-spacing:2px}
+.header h1 span{color:#f44336}
+.header .meta{text-align:right;font-size:.82rem;color:#8899aa}
+.header .meta .date{color:#4FC3F7;font-weight:600}
+.counters{display:flex;gap:12px;flex-wrap:wrap;padding:20px 32px;background:#fff;border-bottom:1px solid #e0e0e0}
+.counter{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;font-weight:600;font-size:.9rem}
+.counter .num{font-size:1.4rem;font-weight:700}
+.counter.crit{background:#fee2e2;color:#dc2626}
+.counter.warn{background:#fef3c7;color:#d97706}
+.counter.att{background:#ffedd5;color:#ea580c}
+.counter.info{background:#dbeafe;color:#2563eb}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.section-title{font-size:1.1rem;font-weight:700;margin:24px 0 12px;padding-left:12px;border-left:4px solid;display:flex;align-items:center;gap:8px}
+.section-title.crit{border-color:#dc2626;color:#dc2626}
+.section-title.warn{border-color:#d97706;color:#d97706}
+.section-title.att{border-color:#ea580c;color:#ea580c}
+.section-title.info{border-color:#2563eb;color:#2563eb}
+.alert-card{background:#fff;border-radius:10px;padding:18px 20px;margin-bottom:14px;border-left:5px solid;box-shadow:0 1px 4px rgba(0,0,0,.06);transition:transform .15s}
+.alert-card:hover{transform:translateX(4px)}
+.alert-card.crit{border-color:#dc2626}
+.alert-card.warn{border-color:#d97706}
+.alert-card.att{border-color:#ea580c}
+.alert-card.info{border-color:#2563eb}
+.alert-card .title{font-weight:700;font-size:.95rem;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.alert-card .desc{font-size:.85rem;color:#555;margin-bottom:10px;line-height:1.5}
+.alert-card .action{font-size:.8rem;color:#fff;display:inline-block;padding:4px 12px;border-radius:5px;font-weight:600}
+.action.crit{background:#dc2626}
+.action.warn{background:#d97706}
+.action.att{background:#ea580c}
+.action.info{background:#2563eb}
+.mil-list{margin:8px 0;font-size:.82rem;max-height:250px;overflow-y:auto}
+.mil-list table{width:100%;border-collapse:collapse}
+.mil-list th{background:#f8f9fa;padding:6px 10px;text-align:left;font-size:.78rem;color:#666;border-bottom:2px solid #e0e0e0;position:sticky;top:0}
+.mil-list td{padding:5px 10px;border-bottom:1px solid #f0f0f0;font-size:.8rem}
+.mil-list tr:hover{background:#f8f9fa}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:600}
+.tag-red{background:#fee2e2;color:#dc2626}
+.tag-orange{background:#ffedd5;color:#ea580c}
+.tag-yellow{background:#fef3c7;color:#d97706}
+.tag-blue{background:#dbeafe;color:#2563eb}
+.tag-green{background:#dcfce7;color:#16a34a}
+.pulse{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 1px 4px rgba(0,0,0,.06)}50%{box-shadow:0 2px 12px rgba(220,38,38,.2)}}
+@media(max-width:600px){.counters{flex-direction:column}.header{flex-direction:column;text-align:center}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>PAINEL DE ALERTAS</span> — EFETIVO BEPE</h1>
+  <div class="meta">
+    <div>Análise automática dos dados do efetivo</div>
+    <div class="date">13 MAI 2026 — Gerado agora</div>
+  </div>
+</div>
+
+<div class="counters">
+  <div class="counter crit"><span class="num">3</span> Críticos</div>
+  <div class="counter warn"><span class="num">3</span> Avisos</div>
+  <div class="counter att"><span class="num">3</span> Atenções</div>
+  <div class="counter info"><span class="num">3</span> Informativos</div>
+</div>
+
+<div class="container">
+
+  <!-- CRÍTICOS -->
+  <div class="section-title crit">ALERTAS CRÍTICOS — Ação imediata necessária</div>
+
+  <div class="alert-card crit pulse">
+    <div class="title">Afastamentos com prazo vencido — 44 militares</div>
+    <div class="desc">Há <strong>44 militares</strong> cujo período de afastamento/restrição já expirou e não há registro de atualização. Alguns com mais de 200 dias de atraso. Isso inclui LTS vencidas, férias não encerradas e restrições sanitárias expiradas.</div>
+    <div class="mil-list">
+      <table>
+        <thead><tr><th>Nome</th><th>Patente</th><th>Função</th><th>Situação</th><th>Término</th><th>Atraso</th></tr></thead>
+        <tbody>
+          <tr><td>SERGIO LISBOA DE MORAES</td><td>1 SGT PM</td><td>ADJ. FISCAL DE DIA</td><td><span class="tag tag-orange">CAT B</span></td><td>16/10/2025</td><td><span class="tag tag-red">209 dias</span></td></tr>
+          <tr><td>LUIZ FELIPE QUINTELA</td><td>3 SGT PM</td><td>TROPA</td><td><span class="tag tag-orange">CAT B</span></td><td>22/10/2025</td><td><span class="tag tag-red">203 dias</span></td></tr>
+          <tr><td>RODRIGO LINDOLFO PASCHOAL</td><td>1 SGT PM</td><td>LTS</td><td><span class="tag tag-red">LTS/CAT C</span></td><td>27/10/2025</td><td><span class="tag tag-red">198 dias</span></td></tr>
+          <tr><td>GERSON HENRIQUE DE MENEZES</td><td>1 SGT PM</td><td>FÉRIAS</td><td><span class="tag tag-green">CAT A</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>SANDRO DUARTE DOS SANTOS</td><td>1 SGT PM</td><td>FÉRIAS</td><td><span class="tag tag-orange">CAT B</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>ALLAN ALVES DE AZEVEDO</td><td>1 SGT PM</td><td>FÉRIAS</td><td><span class="tag tag-orange">CAT B</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>ALEXANDER MODESTO FERNANDES</td><td>1 SGT PM</td><td>FÉRIAS</td><td><span class="tag tag-orange">CAT B</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>ANDRE LUIZ GOMES RIBEIRO</td><td>1 SGT PM</td><td>FÉRIAS</td><td><span class="tag tag-green">CAT A</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>DANIEL PAGANOT FIGUEIREDO E FARO</td><td>3 SGT PM</td><td>FÉRIAS</td><td><span class="tag tag-green">CAT A</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>RODRIGO LUIZ RAMOS FILGUEIRAS</td><td>3 SGT PM</td><td>FÉRIAS</td><td><span class="tag tag-green">CAT A</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>WALDIR SENA FORTES</td><td>3 SGT PM</td><td>FÉRIAS</td><td><span class="tag tag-green">CAT A</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>MARILTON RANGEL JUNIOR</td><td>CB PM</td><td>FÉRIAS</td><td><span class="tag tag-green">CAT A</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>CARLOS ANTONIO MARINHO DE MELLO</td><td>CB PM</td><td>FÉRIAS</td><td><span class="tag tag-green">CAT A</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>RAFAEL ANDRADE SILVA</td><td>CB PM</td><td>FÉRIAS</td><td><span class="tag tag-green">CAT A</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>CARLOS ALEXANDRE FONTES DE SOUZA</td><td>CB PM</td><td>FÉRIAS</td><td><span class="tag tag-green">CAT A</span></td><td>30/10/2025</td><td><span class="tag tag-red">195 dias</span></td></tr>
+          <tr><td>ANDERSON DE SOUSA TELES</td><td>1 SGT PM</td><td>L.E</td><td><span class="tag tag-red">CAT C</span></td><td>31/10/2025</td><td><span class="tag tag-red">194 dias</span></td></tr>
+          <tr><td>LEVI SILVA GOMES</td><td>CB PM</td><td>AUX. P/1 AUX. CIA</td><td><span class="tag tag-orange">CAT B</span></td><td>03/11/2025</td><td><span class="tag tag-red">191 dias</span></td></tr>
+          <tr><td>LEONARDO FRANÇA DE SOUZA</td><td>2 TEN PM</td><td>CURSO</td><td><span class="tag tag-green">CAT A</span></td><td>07/11/2025</td><td><span class="tag tag-red">187 dias</span></td></tr>
+          <tr><td>HUGO LEONARDO FIGUEIRA DOS SANTOS</td><td>3 SGT PM</td><td>FAXINA</td><td><span class="tag tag-red">CAT C</span></td><td>07/11/2025</td><td><span class="tag tag-red">187 dias</span></td></tr>
+          <tr><td>DANIELLE ADELINA VENANCIO DOS SANTOS</td><td>3 SGT PM</td><td>CURSO</td><td><span class="tag tag-green">CAT A</span></td><td>07/11/2025</td><td><span class="tag tag-red">187 dias</span></td></tr>
+          <tr><td>ALINE URIAH RODRIGUES DA SILVA</td><td>3 SGT PM</td><td>CURSO</td><td><span class="tag tag-green">CAT A</span></td><td>07/11/2025</td><td><span class="tag tag-red">187 dias</span></td></tr>
+        </tbody>
+      </table>
+      <div style="text-align:center;padding:8px;color:#888;font-size:.78rem">... e mais 23 militares com prazos vencidos</div>
+    </div>
+    <span class="action crit">AÇÃO: Atualizar situação de cada militar na planilha imediatamente</span>
+  </div>
+
+  <div class="alert-card crit">
+    <div class="title">19 militares APTO CAT A sem arma acautelada</div>
+    <div class="desc">Militares classificados como aptos para o serviço operacional que <strong>não possuem arma acautelada</strong>. Isso compromete a capacidade operacional da unidade.</div>
+    <div class="mil-list">
+      <table>
+        <thead><tr><th>Nome</th><th>Patente</th><th>Função</th></tr></thead>
+        <tbody>
+          <tr><td>VITOR ALEXANDRE SILVEIRA ARAUJO</td><td>MAJ PM</td><td>TROPA</td></tr>
+          <tr><td>RICARDO DE ALMEIDA DOS SANTOS</td><td>MAJ PM</td><td>TROPA</td></tr>
+          <tr><td>EDISON GOMES DA SILVA</td><td>CAP PM</td><td>CHEFE DE CIA</td></tr>
+          <tr><td>BRUNO DE CASTRO TRINDADE</td><td>CAP PM</td><td>CHEFE AJD</td></tr>
+          <tr><td>ROBERTO PAULINO GOMES</td><td>1 TEN PM</td><td>CHEFE SECRETARIA</td></tr>
+          <tr><td>EDGAR DOS SANTOS GOULART JUNIOR</td><td>1 SGT PM</td><td>TROPA</td></tr>
+          <tr><td>ALEX SANTANA DE SOUZA</td><td>1 SGT PM</td><td>P/2 EXPEDIENTE</td></tr>
+          <tr><td>BRUNO ARLEU DE ARAÚJO</td><td>1 SGT PM</td><td>AUX. SECRETARIA</td></tr>
+          <tr><td>ALEX DA CONCEIÇÃO TAVARES</td><td>2 SGT PM</td><td>TROPA</td></tr>
+          <tr><td>RICARDO IGNACIO BALBINO</td><td>2 SGT PM</td><td>P/2 OPERAÇÕES</td></tr>
+          <tr><td>LEONARDO SOARES FERREIRA</td><td>2 SGT PM</td><td>VISIBILIDADE 1</td></tr>
+          <tr><td>LEONARDO DO MONTE DE MENEZES</td><td>2 SGT PM</td><td>TROPA</td></tr>
+          <tr><td>NAYLA PEDRADA CORRÊA DA SILVA</td><td>3 SGT PM</td><td>ORDENANÇA</td></tr>
+          <tr><td>CARLOS A SCHAYDER BENEDITO</td><td>3 SGT PM</td><td>TROPA</td></tr>
+          <tr><td>ALEXANDRE RAFAEL RODRIGUES VELOSO</td><td>3 SGT PM</td><td>QUARTELEIRO</td></tr>
+          <tr><td>TÂMARA SILVA FONTELA</td><td>3 SGT PM</td><td>P/2 OPERAÇÕES</td></tr>
+        </tbody>
+      </table>
+      <div style="text-align:center;padding:8px;color:#888;font-size:.78rem">... e mais 3 militares</div>
+    </div>
+    <span class="action crit">AÇÃO: Providenciar cautela de armamento para estes militares</span>
+  </div>
+
+  <div class="alert-card crit">
+    <div class="title">4 militares Aguardando Reserva Remunerada (R.R)</div>
+    <div class="desc">Quatro militares estão em situação de <strong>aguardando R.R</strong> sem data definida, ocupando vagas no efetivo sem contribuir operacionalmente.</div>
+    <div class="mil-list">
+      <table>
+        <thead><tr><th>Nome</th><th>Patente</th></tr></thead>
+        <tbody>
+          <tr><td>CLAUDIO DE MARIANO DE RESENDE</td><td>SUBTEN PM</td></tr>
+          <tr><td>RONALDO DE AVELLAR FERNANDES</td><td>SUBTEN PM</td></tr>
+          <tr><td>JOSÉ CARLOS LOUREIRO DE ABRANTES</td><td>SUBTEN PM</td></tr>
+          <tr><td>CARLOS EDUARDO ALMEIDA DE LIMA</td><td>SUBTEN PM</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <span class="action crit">AÇÃO: Acompanhar processo junto ao DGPE para agilizar R.R</span>
+  </div>
+
+  <!-- AVISOS -->
+  <div class="section-title warn">AVISOS — Atenção necessária em breve</div>
+
+  <div class="alert-card warn">
+    <div class="title">3 afastamentos vencendo nos próximos 30 dias</div>
+    <div class="desc">Três militares têm seus períodos de afastamento expirando em breve. Planejar retorno ou renovação.</div>
+    <div class="mil-list">
+      <table>
+        <thead><tr><th>Nome</th><th>Patente</th><th>Função</th><th>Término</th><th>Dias Restantes</th></tr></thead>
+        <tbody>
+          <tr><td>MARLON MONTEIRO FARIA</td><td>1 SGT PM</td><td>AUX. AJD</td><td>02/06/2026</td><td><span class="tag tag-yellow">20 dias</span></td></tr>
+          <tr><td>JORGE EDUARDO PEDREIRA SILVA</td><td>SUBTEN PM</td><td>FAXINA /AUX. DESP</td><td>04/06/2026</td><td><span class="tag tag-yellow">22 dias</span></td></tr>
+          <tr><td>LUIZ HENRIQUE DA SILVA BARROS</td><td>2 SGT PM</td><td>AUX. P/3</td><td>11/06/2026</td><td><span class="tag tag-yellow">29 dias</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <span class="action warn">AÇÃO: Preparar documentação de retorno ou renovação</span>
+  </div>
+
+  <div class="alert-card warn">
+    <div class="title">85 militares com férias pendentes</div>
+    <div class="desc">A aba "PENDÊNCIA DE FÉRIAS" registra <strong>85 militares</strong> com férias acumuladas de anos anteriores (2022, 2023 e 2024). Isso representa <strong>39% do efetivo</strong> e pode gerar passivo trabalhista.</div>
+    <span class="action warn">AÇÃO: Elaborar cronograma de férias priorizando pendências mais antigas</span>
+  </div>
+
+  <div class="alert-card warn">
+    <div class="title">45 militares APTO CAT A sem colete acautelado</div>
+    <div class="desc">Quase metade dos militares disponíveis para serviço não possui colete balístico acautelado. Em um batalhão prisional, isso representa risco elevado à integridade física.</div>
+    <span class="action warn">AÇÃO: Solicitar coletes ao setor de logística/suprimento</span>
+  </div>
+
+  <!-- ATENÇÃO -->
+  <div class="section-title att">ATENÇÃO — Monitorar</div>
+
+  <div class="alert-card att">
+    <div class="title">21 saídas (transferências) nos últimos 12 meses</div>
+    <div class="desc">Foram registradas 21 transferências de militares nos últimos 12 meses na aba SAÍDA. Nenhuma saída nos últimos 6 meses, indicando estabilidade recente, mas o volume anual é significativo.</div>
+    <span class="action att">AÇÃO: Monitorar se novas movimentações estão previstas</span>
+  </div>
+
+  <div class="alert-card att">
+    <div class="title">34 militares com restrição sanitária (Cat B + Cat C)</div>
+    <div class="desc"><strong>25 Cat B</strong> e <strong>9 Cat C</strong> representam 15.6% do efetivo com alguma limitação para o serviço. Muitos possuem datas de validade da restrição já vencidas, necessitando reavaliação médica.</div>
+    <span class="action att">AÇÃO: Encaminhar para reavaliação médica na Junta de Saúde</span>
+  </div>
+
+  <div class="alert-card att">
+    <div class="title">1 militar aguardando reforma (AG. REFORMA)</div>
+    <div class="desc">Existe um militar em situação de "AG. REFORMA", processo que deve ser acompanhado junto aos órgãos competentes.</div>
+    <span class="action att">AÇÃO: Verificar andamento do processo de reforma</span>
+  </div>
+
+  <!-- INFO -->
+  <div class="section-title info">INFORMATIVOS — Situação geral</div>
+
+  <div class="alert-card info">
+    <div class="title">Taxa de operacionalidade: 77.1%</div>
+    <div class="desc">O batalhão possui <strong>168 de 218 militares</strong> classificados como APTO CAT A. A taxa está <strong>acima de 70%</strong>, que é o limiar mínimo aceitável, mas há espaço para melhoria com a resolução dos afastamentos vencidos.</div>
+    <span class="action info">STATUS: Dentro do aceitável — meta: acima de 80%</span>
+  </div>
+
+  <div class="alert-card info">
+    <div class="title">Composição: 17 Oficiais / 201 Praças</div>
+    <div class="desc">Proporção de 1 oficial para cada 11.8 praças. Distribuição por setor: <strong>CIA: 126</strong> (57.8%), <strong>CCSV: 71</strong> (32.6%), <strong>Oficiais: 17</strong> (7.8%). A CIA concentra a maior parte do efetivo operacional.</div>
+    <span class="action info">STATUS: Proporção dentro do esperado para batalhão prisional</span>
+  </div>
+
+  <div class="alert-card info">
+    <div class="title">Armamento e equipamento</div>
+    <div class="desc">
+      <strong>Armas:</strong> 148 acauteladas (76.7%) · 45 sem (23.3%)<br>
+      <strong>Coletes:</strong> 95 acautelados (55.9%) · 75 sem (44.1%)<br>
+      <strong>CPPD:</strong> 133 com (61%) · 71 sem<br>
+      O índice de coletes é o mais preocupante — menos da metade do efetivo coberto.
+    </div>
+    <span class="action info">STATUS: Armamento adequado; coletes abaixo do ideal</span>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório de Efetivo - BEPE</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Times New Roman',Georgia,serif;background:#fff;color:#222;font-size:14px;line-height:1.6}
+@media print{body{font-size:11pt}.no-print{display:none!important}.page-break{page-break-before:always}}
+.header-bar{background:#003366;color:#fff;padding:20px 40px;display:flex;justify-content:space-between;align-items:center}
+.header-bar h1{font-size:1.1rem;letter-spacing:3px}
+.header-bar .subtitle{font-size:.85rem;opacity:.8}
+.doc-header{text-align:center;padding:30px 40px 20px;border-bottom:3px double #003366}
+.doc-header .org{font-size:1rem;font-weight:700;color:#003366;letter-spacing:2px}
+.doc-header .unit{font-size:1.3rem;font-weight:700;color:#003366;margin:4px 0}
+.doc-header .doc-title{font-size:1.5rem;font-weight:700;margin:12px 0;color:#003366;border:2px solid #003366;display:inline-block;padding:6px 30px}
+.doc-header .doc-meta{font-size:.85rem;color:#555;margin-top:8px}
+.container{max-width:900px;margin:0 auto;padding:30px 40px}
+h2{font-size:1.1rem;color:#003366;margin:28px 0 12px;padding-bottom:6px;border-bottom:2px solid #003366;letter-spacing:1px}
+h2 span.num{background:#003366;color:#fff;display:inline-block;width:28px;height:28px;text-align:center;line-height:28px;border-radius:50%;font-size:.85rem;margin-right:8px}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.summary-item{background:#f0f4f8;padding:14px 18px;border-radius:6px;border-left:4px solid #003366}
+.summary-item .val{font-size:1.8rem;font-weight:700;color:#003366}
+.summary-item .lbl{font-size:.8rem;color:#555;text-transform:uppercase;letter-spacing:1px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.85rem}
+thead th{background:#003366;color:#fff;padding:8px 10px;text-align:left;font-weight:600;font-size:.8rem}
+tbody td{padding:7px 10px;border-bottom:1px solid #ddd}
+tbody tr:nth-child(even){background:#f8f9fa}
+tbody tr:hover{background:#e8f0fe}
+tfoot td{background:#f0f4f8;font-weight:700;border-top:2px solid #003366;padding:8px 10px}
+.highlight{background:#fff3cd;padding:2px 6px;border-radius:3px;font-weight:600}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:600}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-yellow{background:#fef3c7;color:#92400e}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.recom-box{background:#f0f4f8;border-left:4px solid #003366;padding:16px 20px;margin:12px 0;border-radius:0 6px 6px 0}
+.recom-box li{margin:6px 0;font-size:.9rem}
+.footer{text-align:center;padding:20px;font-size:.78rem;color:#888;border-top:1px solid #ddd;margin-top:30px}
+.operac-bar{height:30px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin:8px 0}
+.operac-fill{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.85rem}
+</style>
+</head>
+<body>
+
+<div class="header-bar no-print">
+  <div>
+    <h1>RELATÓRIO DE EFETIVO</h1>
+    <div class="subtitle">Batalhão Especializado de Policiamento em Estádio — PMERJ</div>
+  </div>
+  <div style="font-size:.85rem">
+    <button onclick="window.print()" style="background:#fff;color:#003366;border:none;padding:8px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:.85rem">IMPRIMIR / PDF</button>
+  </div>
+</div>
+
+<div class="doc-header">
+  <div class="org">POLÍCIA MILITAR DO ESTADO DO RIO DE JANEIRO</div>
+  <div class="unit">BATALHÃO ESPECIALIZADO DE POLICIAMENTO EM ESTÁDIO — BEPE</div>
+  <div class="doc-title">RELATÓRIO DE EFETIVO</div>
+  <div class="doc-meta">Data de referência: 13 de maio de 2026 · Classificação: USO INTERNO</div>
+</div>
+
+<div class="container">
+
+  <!-- 1. RESUMO EXECUTIVO -->
+  <h2><span class="num">1</span> RESUMO EXECUTIVO</h2>
+
+  <div class="summary-grid">
+    <div class="summary-item">
+      <div class="val">218</div>
+      <div class="lbl">Efetivo Total</div>
+    </div>
+    <div class="summary-item" style="border-color:#16a34a">
+      <div class="val" style="color:#16a34a">168</div>
+      <div class="lbl">Disponíveis (Apto Cat A)</div>
+    </div>
+    <div class="summary-item" style="border-color:#d97706">
+      <div class="val" style="color:#d97706">34</div>
+      <div class="lbl">Restritos (Cat B + Cat C)</div>
+    </div>
+    <div class="summary-item" style="border-color:#dc2626">
+      <div class="val" style="color:#dc2626">24</div>
+      <div class="lbl">Afastados</div>
+    </div>
+  </div>
+
+  <div class="operac-bar">
+    <div class="operac-fill" style="width:77.1%;background:linear-gradient(90deg,#16a34a,#22c55e)">77.1% OPERACIONALIDADE</div>
+  </div>
+
+  <table>
+    <thead><tr><th>Tipo de Afastamento</th><th>Quantidade</th><th>% do Efetivo</th></tr></thead>
+    <tbody>
+      <tr><td>Licença para Tratamento de Saúde (LTS)</td><td>7</td><td>3.2%</td></tr>
+      <tr><td>Aguardando Reserva Remunerada (R.R)</td><td>4</td><td>1.8%</td></tr>
+      <tr><td>Férias</td><td>13</td><td>6.0%</td></tr>
+      <tr><td>Licença Especial (L.E)</td><td>1</td><td>0.5%</td></tr>
+      <tr><td>Aguardando Reforma</td><td>1</td><td>0.5%</td></tr>
+    </tbody>
+    <tfoot><tr><td>TOTAL DE AFASTADOS</td><td>26</td><td>11.9%</td></tr></tfoot>
+  </table>
+
+  <!-- 2. DISTRIBUIÇÃO POR POSTO/GRADUAÇÃO -->
+  <h2><span class="num">2</span> DISTRIBUIÇÃO POR POSTO/GRADUAÇÃO</h2>
+
+  <table>
+    <thead>
+      <tr><th>Posto/Graduação</th><th>Qtd Total</th><th>% do Efetivo</th><th>Classificação</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>TEN CEL PM</td><td>2</td><td>0.9%</td><td><span class="badge badge-blue">Oficial Superior</span></td></tr>
+      <tr><td>MAJ PM</td><td>4</td><td>1.8%</td><td><span class="badge badge-blue">Oficial Superior</span></td></tr>
+      <tr><td>CAP PM</td><td>5</td><td>2.3%</td><td><span class="badge badge-blue">Oficial Intermediário</span></td></tr>
+      <tr><td>1º TEN PM</td><td>3</td><td>1.4%</td><td><span class="badge badge-blue">Oficial Subalterno</span></td></tr>
+      <tr><td>2º TEN PM</td><td>3</td><td>1.4%</td><td><span class="badge badge-blue">Oficial Subalterno</span></td></tr>
+      <tr style="border-top:2px solid #003366"><td>SUBTEN PM</td><td>35</td><td>16.1%</td><td><span class="badge badge-green">Praça Especial</span></td></tr>
+      <tr><td>1º SGT PM</td><td>35</td><td>16.1%</td><td><span class="badge badge-green">Praça</span></td></tr>
+      <tr><td>2º SGT PM</td><td>16</td><td>7.3%</td><td><span class="badge badge-green">Praça</span></td></tr>
+      <tr><td>3º SGT PM</td><td>63</td><td><span class="highlight">28.9%</span></td><td><span class="badge badge-green">Praça</span></td></tr>
+      <tr><td>CB PM</td><td>42</td><td>19.3%</td><td><span class="badge badge-green">Praça</span></td></tr>
+      <tr><td>SD PM</td><td>6</td><td>2.8%</td><td><span class="badge badge-green">Praça</span></td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td>TOTAL OFICIAIS</td><td>17</td><td>7.8%</td><td></td></tr>
+      <tr><td>TOTAL PRAÇAS</td><td>201</td><td>92.2%</td><td></td></tr>
+      <tr><td><strong>TOTAL GERAL</strong></td><td><strong>218</strong></td><td><strong>100%</strong></td><td></td></tr>
+    </tfoot>
+  </table>
+
+  <!-- 3. ALOCAÇÃO POR SETOR -->
+  <h2><span class="num">3</span> ALOCAÇÃO POR SETOR</h2>
+
+  <table>
+    <thead><tr><th>Setor</th><th>Efetivo</th><th>% do Total</th><th>Observação</th></tr></thead>
+    <tbody>
+      <tr><td>CIA (Companhia)</td><td><strong>126</strong></td><td>57.8%</td><td>Efetivo operacional principal</td></tr>
+      <tr><td>CCSV</td><td><strong>71</strong></td><td>32.6%</td><td>Apoio e serviços</td></tr>
+      <tr><td>OFICIAIS</td><td><strong>17</strong></td><td>7.8%</td><td>Comando e chefia</td></tr>
+    </tbody>
+    <tfoot><tr><td><strong>TOTAL</strong></td><td><strong>218</strong></td><td><strong>100%</strong></td><td></td></tr></tfoot>
+  </table>
+
+  <!-- 4. SITUAÇÃO SANITÁRIA -->
+  <h2><span class="num">4</span> SITUAÇÃO SANITÁRIA</h2>
+
+  <table>
+    <thead><tr><th>Situação</th><th>Quantidade</th><th>%</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>APTO CAT A</td><td>168</td><td>77.1%</td><td><span class="badge badge-green">Operacional</span></td></tr>
+      <tr><td>APTO CAT B</td><td>25</td><td>11.5%</td><td><span class="badge badge-yellow">Restrição parcial</span></td></tr>
+      <tr><td>APTO CAT C</td><td>9</td><td>4.1%</td><td><span class="badge badge-yellow">Restrição maior</span></td></tr>
+      <tr><td>LTS</td><td>5</td><td>2.3%</td><td><span class="badge badge-red">Afastado</span></td></tr>
+      <tr><td>LTS / APTO CAT C</td><td>2</td><td>0.9%</td><td><span class="badge badge-red">Afastado</span></td></tr>
+      <tr><td>AGUARDANDO R.R</td><td>4</td><td>1.8%</td><td><span class="badge badge-red">Afastado</span></td></tr>
+      <tr><td>AG. REFORMA</td><td>1</td><td>0.5%</td><td><span class="badge badge-red">Afastado</span></td></tr>
+    </tbody>
+    <tfoot><tr><td><strong>TOTAL</strong></td><td><strong>218</strong></td><td><strong>100%</strong></td><td></td></tr></tfoot>
+  </table>
+
+  <!-- 5. PENDÊNCIAS DE FÉRIAS -->
+  <h2><span class="num">5</span> PENDÊNCIAS DE FÉRIAS</h2>
+
+  <p style="margin:8px 0">A aba "PENDÊNCIA DE FÉRIAS" registra <strong>85 militares</strong> com férias acumuladas de exercícios anteriores. Adicionalmente, a coluna "FÉRIAS VENCIDAS" da aba principal identifica <strong>119 militares</strong> com alguma pendência de férias.</p>
+
+  <table>
+    <thead><tr><th>Indicador</th><th>Valor</th></tr></thead>
+    <tbody>
+      <tr><td>Militares com férias pendentes (aba dedicada)</td><td><strong>85</strong></td></tr>
+      <tr><td>Militares com campo "Férias Vencidas" preenchido</td><td><strong>119</strong></td></tr>
+      <tr><td>Percentual do efetivo com pendência</td><td><span class="highlight">54.6%</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="recom-box">
+    <strong>Observação:</strong> O acúmulo de férias de múltiplos exercícios (2022, 2023, 2024) configura risco jurídico e afeta o bem-estar do efetivo. Recomenda-se elaboração de cronograma emergencial priorizando pendências mais antigas.
+  </div>
+
+  <!-- 6. ARMAMENTO E EQUIPAMENTO -->
+  <h2><span class="num">6</span> ARMAMENTO E EQUIPAMENTO</h2>
+
+  <table>
+    <thead><tr><th>Item</th><th>SIM</th><th>NÃO</th><th>% Coberto</th></tr></thead>
+    <tbody>
+      <tr><td>Arma Acautelada</td><td>148</td><td>45</td><td><span class="badge badge-green">76.7%</span></td></tr>
+      <tr><td>Colete Acautelado</td><td>95</td><td>75</td><td><span class="badge badge-yellow">55.9%</span></td></tr>
+      <tr><td>CPPD</td><td>133</td><td>71</td><td><span class="badge badge-green">65.2%</span></td></tr>
+      <tr><td>Curso COP</td><td>1</td><td>—</td><td><span class="badge badge-red">0.5%</span></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 7. HISTÓRICO DE MOVIMENTAÇÃO -->
+  <h2><span class="num">7</span> HISTÓRICO DE MOVIMENTAÇÃO</h2>
+
+  <p style="margin:8px 0">A aba "SAÍDA" registra <strong>214 movimentações</strong> de militares transferidos desde janeiro de 2021.</p>
+
+  <table>
+    <thead><tr><th>Período</th><th>Transferências</th></tr></thead>
+    <tbody>
+      <tr><td>Últimos 12 meses</td><td>21</td></tr>
+      <tr><td>Últimos 6 meses</td><td>0</td></tr>
+      <tr><td>Total histórico (desde 2021)</td><td>214</td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin:8px 0">Nenhuma saída registrada nos últimos 6 meses, indicando estabilidade no efetivo atual.</p>
+
+  <!-- 8. INDICADORES E RECOMENDAÇÕES -->
+  <h2><span class="num">8</span> INDICADORES E RECOMENDAÇÕES</h2>
+
+  <table>
+    <thead><tr><th>Indicador</th><th>Valor</th><th>Avaliação</th></tr></thead>
+    <tbody>
+      <tr><td>Taxa de Operacionalidade</td><td>77.1%</td><td><span class="badge badge-green">Aceitável (meta: >80%)</span></td></tr>
+      <tr><td>Taxa de Afastamento</td><td>11.9%</td><td><span class="badge badge-yellow">Moderada</span></td></tr>
+      <tr><td>Índice de Acúmulo de Férias</td><td>54.6%</td><td><span class="badge badge-red">Crítico</span></td></tr>
+      <tr><td>Cobertura de Armamento</td><td>76.7%</td><td><span class="badge badge-green">Adequado</span></td></tr>
+      <tr><td>Cobertura de Coletes</td><td>55.9%</td><td><span class="badge badge-red">Insuficiente</span></td></tr>
+      <tr><td>Proporção Oficial/Praça</td><td>1:11.8</td><td><span class="badge badge-green">Normal</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="recom-box">
+    <strong>Recomendações ao Comandante:</strong>
+    <ol style="margin:10px 0 0 20px">
+      <li><strong>Atualizar planilha de afastamentos:</strong> 44 militares com datas vencidas sem atualização — comprometendo a confiabilidade dos dados.</li>
+      <li><strong>Cronograma emergencial de férias:</strong> 54.6% do efetivo com férias pendentes, risco jurídico e de saúde ocupacional.</li>
+      <li><strong>Solicitar coletes balísticos:</strong> Apenas 55.9% de cobertura em batalhão prisional é insuficiente para a segurança operacional.</li>
+      <li><strong>Regularizar armas para APTO CAT A:</strong> 19 militares aptos sem arma acautelada precisam de cautela.</li>
+      <li><strong>Acompanhar processos de R.R:</strong> 4 subtenentes aguardando reserva remunerada sem data definida.</li>
+      <li><strong>Reavaliação médica:</strong> Militares com restrição sanitária vencida devem ser encaminhados à Junta de Saúde.</li>
+    </ol>
+  </div>
+
+</div>
+
+<div class="footer">
+  POLÍCIA MILITAR DO ESTADO DO RIO DE JANEIRO — BATALHÃO ESPECIALIZADO DE POLICIAMENTO EM ESTÁDIO (BEPE)<br>
+  Relatório gerado em 13 de maio de 2026 · Documento de uso interno · Página 1/1
+</div>
+
+</body>
+</html>

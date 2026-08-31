@@ -6,11 +6,17 @@
 <title>Dashboard Efetivo - BEPE</title>
 <meta name="description" content="Dashboard de gestão do efetivo — Batalhão Especializado de Policiamento em Estádio (BEPE/PMERJ)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a2940'/%3E%3Cpath d='M32 8l20 8v14c0 12-8 22-20 26C20 52 12 42 12 30V16z' fill='%232196F3'/%3E%3Cpath d='M32 14l14 5.6V30c0 8.4-5.6 15.4-14 18.2C23.6 45.4 18 38.4 18 30v-10.4z' fill='%230d1b2a'/%3E%3C/svg%3E">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- Bibliotecas servidas do proprio projeto (pasta vendor/). Vinham de CDN e
+     o dashboard abria quebrado em rede com proxy ou bloqueio de dominio externo.
+     Versoes: chart.js 4.4.4 | xlsx 0.18.5 | firebase 10.12.2 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="vendor/chart.umd.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
 <script src="efetivo_data.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-database-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyBVpNhZE0pujZQRvcGlieqPJmoZTbxwNEQ",
@@ -24,11 +30,12 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const efetivoRef = db.ref('efetivo');
+  const syncRef    = db.ref('meta/ultimaSync');
   const fotosRef = db.ref('fotos');
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e0;min-height:100vh}
+body{font-family:'Segoe UI Variable','Segoe UI',system-ui,-apple-system,sans-serif;background:var(--ground);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
 
 .header{background:linear-gradient(135deg,#1a2940,#0d1b2a);padding:16px 24px;border-bottom:3px solid #2196F3;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .header h1{font-size:1.3rem;color:#fff;letter-spacing:1.5px}
@@ -46,29 +53,70 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e0e0e
 .toolbar .search{flex:1;min-width:200px;padding:8px 14px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.85rem}
 .toolbar .search::placeholder{color:#556677}
 
-.container{max-width:1400px;margin:0 auto;padding:16px}
+/* O respiro no rodape existe para o sino flutuante nao terminar por cima de
+   nenhum numero quando a pagina chega ao fim. */
+.container{max-width:1400px;margin:0 auto;padding:16px 16px 88px}
 
 /* CARDS */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-.card{background:#1a2940;border-radius:10px;padding:16px;text-align:center;border-left:4px solid;transition:transform .2s}
-.card:hover{transform:translateY(-2px);cursor:pointer}
-.card .number{font-size:2.4rem;font-weight:700;line-height:1.1}
-.card .label{font-size:.78rem;color:#8899aa;margin-top:4px;text-transform:uppercase;letter-spacing:1px}
-.card .sub{font-size:.7rem;color:#667788;margin-top:2px}
-.card.total{border-color:#2196F3}.card.total .number{color:#2196F3}
-.card.disp{border-color:#4CAF50}.card.disp .number{color:#4CAF50}
-.card.tropa{border-color:#2E7D32}.card.tropa .number{color:#2E7D32}
-.card.oficiais-card{border-color:#FFD600}.card.oficiais-card .number{color:#FFD600}
-.card.cia-outros{border-color:#78909C}.card.cia-outros .number{color:#78909C}
-.card.ccsv-card{border-color:#26C6DA}.card.ccsv-card .number{color:#26C6DA}
-.card.restrito-c{border-color:#FF5722}.card.restrito-c .number{color:#FF5722}
-.card.tc-card{border-color:#8D6E63}.card.tc-card .number{color:#8D6E63}
-.card.restrito{border-color:#FF9800}.card.restrito .number{color:#FF9800}
-.card.afastado{border-color:#f44336}.card.afastado .number{color:#f44336}
-.card.ferias{border-color:#00BCD4}.card.ferias .number{color:#00BCD4}
-.card.oper{border-color:#00BCD4}.card.oper .number{color:#00BCD4}
-.card.abono-card{border-color:#FFC107}.card.abono-card .number{color:#FFC107}
-.card.agrr-card{border-color:#AB47BC}.card.agrr-card .number{color:#AB47BC}
+/* ── Sistema de design ──────────────────────────────────────────────────────
+   Neutros com viés azul (escolhidos, não herdados de cinza puro).
+   A cor de identidade (--acc) é separada das cores semânticas: um card fica
+   âmbar porque o número PEDE atenção, nunca porque "é o card de férias". */
+:root{
+  --ground:#0B1520; --surface:#16232F; --raised:#1B2B3D; --line:#22374F;
+  /* --ink-faint e --crit foram calibrados por medicao de contraste sobre a
+     superficie do card (#16232F): 3.51 e 4.25 reprovavam no AA. Agora 4.72 e 4.77. */
+  --ink:#E6EDF5; --ink-dim:#8CA0B8; --ink-faint:#788EA4;
+  --acc:#4FC3F7;
+  --ok:#3DD68C; --warn:#F5A524; --crit:#F4564B;
+  --passo:4px;
+}
+
+/* Nível 1 — Prontidão. Responde "posso botar na rua?" antes de qualquer detalhe. */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:18px 18px 16px;position:relative;overflow:hidden;
+  transition:transform .18s ease,border-color .18s ease}
+.card:hover{transform:translateY(-2px);cursor:pointer;border-color:var(--acc)}
+.card:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+/* Faixa de severidade: largura fixa, cor vinda do estado do número */
+.card::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:var(--line)}
+.card.est-ok::before{background:var(--ok)}
+.card.est-warn::before{background:var(--warn)}
+.card.est-crit::before{background:var(--crit)}
+.card .number{font-size:2.6rem;font-weight:700;line-height:1;color:var(--ink);
+  font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.card.est-ok .number{color:var(--ok)}
+.card.est-warn .number{color:var(--warn)}
+.card.est-crit .number{color:var(--crit)}
+.card .label{font-size:.7rem;color:var(--ink-dim);margin-top:8px;text-transform:uppercase;
+  letter-spacing:1.4px;font-weight:600}
+.card .sub{font-size:.72rem;color:var(--ink-faint);margin-top:5px;line-height:1.45;
+  font-variant-numeric:tabular-nums}
+/* Medidor: o percentual vira forma, não só número */
+.card .medidor{margin-top:11px;height:4px;background:var(--raised);border-radius:2px;overflow:hidden}
+.card .medidor i{display:block;height:100%;background:var(--acc);border-radius:2px}
+.card.est-ok .medidor i{background:var(--ok)}
+.card.est-warn .medidor i{background:var(--warn)}
+.card.est-crit .medidor i{background:var(--crit)}
+
+/* Nível 2 — Detalhamento. Mesma informação, peso visual subordinado. */
+.grupos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:20px}
+.grupo{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.grupo > h4{font-size:.63rem;color:var(--ink-faint);text-transform:uppercase;letter-spacing:1.6px;
+  margin:0 0 10px;font-weight:700}
+.chips{display:flex;flex-direction:column;gap:2px}
+.chip{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:7px 8px;border-radius:7px;cursor:pointer;transition:background .15s}
+.chip:hover{background:var(--raised)}
+.chip:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.chip .cn{font-size:.76rem;color:var(--ink-dim)}
+.chip .cv{font-size:1.02rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.chip.est-warn .cv{color:var(--warn)}
+.chip.est-crit .cv{color:var(--crit)}
+@media (prefers-reduced-motion:reduce){
+  .card,.card:hover,.chip{transition:none;transform:none}
+}
 
 /* MOBILE CHARTS */
 .mobile-chart-alt{display:none}
@@ -253,7 +301,10 @@ body.view-mode .edit-only{display:none !important}
   .header{padding:12px 14px;flex-direction:column;align-items:flex-start}
   .header h1{font-size:1rem;line-height:1.3}
   .header .meta{text-align:left;font-size:.7rem}
-  .toolbar{padding:8px 14px;flex-direction:column;gap:8px}
+  /* Era flex-direction:column com btn width:100% -- sete botoes viravam sete
+     linhas e empurravam todo o conteudo para baixo da dobra. */
+  .toolbar{padding:8px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+  .toolbar .search{grid-column:1/-1;min-width:0}
   .toolbar .btn{width:100%;justify-content:center}
   .toolbar .search{min-width:100%}
   .container{padding:10px}
@@ -278,14 +329,17 @@ body.view-mode .edit-only{display:none !important}
 }
 
 /* ─── ALERTAS LTS VENCENDO ─── */
-.alerta-bell{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:90;cursor:pointer;background:#1a2940;border:1px solid #1e3450;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all .2s}
+/* Ficava em top:14px;left:50% -- exatamente sobre o titulo do cabecalho,
+   cobrindo o "BE" de "BEPE". Canto inferior direito nao disputa espaco com
+   nada, e o sino continua arrastavel para onde o usuario preferir. */
+.alerta-bell{position:fixed;bottom:20px;right:20px;z-index:90;cursor:pointer;background:var(--raised);border:1px solid var(--line);border-radius:50%;width:46px;height:46px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 4px 14px rgba(0,0,0,.45);transition:border-color .2s,box-shadow .2s}
 .alerta-bell:hover{border-color:#f44336;box-shadow:0 0 12px #f4433640}
 .alerta-bell .alerta-badge{position:absolute;top:-4px;right:-4px;background:#f44336;color:#fff;font-size:.62rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;animation:pulse-bell 2s infinite}
 @keyframes pulse-bell{0%,100%{box-shadow:0 0 0 0 #f4433660}50%{box-shadow:0 0 0 6px #f4433600}}
 .alerta-bell.empty{opacity:.4}
 .alerta-bell.empty .alerta-badge{display:none}
 
-.alerta-panel{position:fixed;top:64px;left:50%;transform:translateX(-50%);width:380px;max-width:calc(100vw - 40px);max-height:70vh;background:#1a2940;border:1px solid #f4433640;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.6);z-index:95;display:none;flex-direction:column;overflow:hidden}
+.alerta-panel{position:fixed;bottom:76px;right:20px;width:380px;max-width:calc(100vw - 40px);max-height:70vh;background:#1a2940;border:1px solid #f4433640;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.6);z-index:95;display:none;flex-direction:column;overflow:hidden}
 .alerta-panel.show{display:flex}
 .alerta-panel-head{padding:14px 18px;background:linear-gradient(135deg,#f4433620,#1a2940);border-bottom:1px solid #f4433630;display:flex;align-items:center;gap:10px}
 .alerta-panel-head h3{font-size:.85rem;color:#f44336;font-weight:700;letter-spacing:.5px;flex:1}
@@ -313,7 +367,7 @@ body.view-mode .edit-only{display:none !important}
 .mil-dias.info{background:#2196F320;color:#2196F3}
 
 @media(max-width:600px){
-  .alerta-bell{top:auto;bottom:20px;left:50%;transform:translateX(-50%);width:48px;height:48px;font-size:1.4rem;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  .alerta-bell{bottom:16px;right:16px;left:auto;top:auto;transform:none;width:48px;height:48px;font-size:1.4rem;box-shadow:0 4px 16px rgba(0,0,0,.5)}
   .alerta-panel{top:auto;bottom:80px;left:14px;right:14px;transform:none;width:auto;max-height:60vh}
 }
 
@@ -373,6 +427,20 @@ body.view-mode .edit-only{display:none !important}
 .arma-pend{background:#1a2940;border:1px solid #f4433640;border-left:3px solid #f44336;border-radius:8px;padding:14px}
 .arma-pend h4{font-size:.75rem;color:#f44336;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
 .pend-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;max-height:300px;overflow-y:auto}
+.pd-sec{margin-bottom:22px}
+.pd-sec h3{font-size:.78rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.pd-sec h3 .n{background:#1e3450;color:#fff;border-radius:10px;padding:1px 9px;font-size:.72rem}
+.pd-row{background:#0d1b2a;border-radius:6px;padding:9px 11px;margin-bottom:6px;font-size:.75rem;border-left:3px solid #1e3450}
+.pd-row.crit{border-left-color:#f44336}
+.pd-row.aten{border-left-color:#ff9800}
+.pd-row .pd-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.pd-row .pd-nome{color:#e0e0e0;font-weight:600}
+.pd-row .pd-tag{font-size:.63rem;padding:1px 7px;border-radius:8px;background:#1e3450;color:#8899aa;white-space:nowrap}
+.pd-row .pd-tag.crit{background:#4a1512;color:#ff8a80}
+.pd-row .pd-tag.aten{background:#4a3512;color:#ffcc80}
+.pd-row .pd-txt{color:#8899aa;font-size:.7rem;margin-top:4px;line-height:1.45}
+.pd-nota{background:#12202e;border-left:3px solid #4FC3F7;padding:10px 13px;border-radius:6px;font-size:.7rem;color:#8899aa;line-height:1.55;margin-top:6px}
+.pd-vazio{color:#8899aa;font-size:.73rem;padding:8px 2px}
 .pend-item{background:#0d1b2a;border-radius:6px;padding:8px 10px;font-size:.75rem;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;transition:background .2s}
 .pend-item:hover{background:#1e3450}
 .pend-item .pn{color:#e0e0e0;font-weight:600;font-size:.74rem}
@@ -448,7 +516,9 @@ body.view-mode .edit-only{display:none !important}
 <body>
 
 <!-- Sino de Alertas LTS -->
-<div class="alerta-bell empty" id="alertaBell" onclick="toggleAlertaPanel()" title="Alertas de LTS">
+<div class="alerta-bell empty" id="alertaBell" onclick="toggleAlertaPanel()" title="Alertas de LTS"
+     role="button" tabindex="0" aria-label="Abrir alertas de LTS vencendo"
+     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAlertaPanel();}">
   🚨
   <span class="alerta-badge" id="alertaBadge">0</span>
 </div>
@@ -457,7 +527,7 @@ body.view-mode .edit-only{display:none !important}
 <div class="alerta-panel" id="alertaPanel">
   <div class="alerta-panel-head">
     <h3>🚨 LTS Vencendo</h3>
-    <button class="close-x" onclick="toggleAlertaPanel()">×</button>
+    <button class="close-x" aria-label="Fechar alertas" onclick="toggleAlertaPanel()">×</button>
   </div>
   <div class="alerta-panel-body" id="alertaPanelBody"></div>
 </div>
@@ -472,9 +542,11 @@ body.view-mode .edit-only{display:none !important}
 </div>
 
 <div class="toolbar">
-  <button class="btn btn-primary edit-only" onclick="openAddModal()">+ Adicionar Militar</button>
-  <button class="btn btn-danger edit-only" id="btnExcluir" onclick="excluirSelecionados()" style="display:none">Excluir Selecionados (<span id="selCount">0</span>)</button>
-  <input type="text" class="search" id="searchInput" placeholder="Buscar por nome, patente, função..." oninput="onBuscar()">
+  <!-- Removidos: "Adicionar Militar", "Excluir Selecionados" e "Resetar Dados
+       Originais". Os tres gravavam por cima de dados que pertencem a planilha,
+       e a sincronizacao desfazia tudo em ate 10 minutos -- sem avisar ninguem.
+       O cadastro entra e sai pela planilha EFETIVO 2025. -->
+  <input type="text" class="search" id="searchInput" aria-label="Buscar militar por nome, patente ou função" placeholder="Buscar por nome, patente, função..." oninput="onBuscar()">
   <button class="btn btn-outline" onclick="exportarCSV()">📄 CSV</button>
   <button class="btn btn-outline btn-excel" onclick="exportarExcel()">📊 Excel</button>
   <button class="btn btn-success edit-only" onclick="abrirCompartilhar()">&#128279; Compartilhar</button>
@@ -482,11 +554,12 @@ body.view-mode .edit-only{display:none !important}
   <button class="btn btn-outline" onclick="abrirArmamento()" title="Painel de armamento">🔫 Armamento</button>
   <button class="btn btn-outline" onclick="abrirLog()" title="Log de alterações">📝 Log</button>
   <button class="btn btn-outline" onclick="abrirBoletim()" title="Boletim diário">📋 Boletim</button>
-  <button class="btn btn-outline edit-only" onclick="resetarDados()">Resetar Dados Originais</button>
+  <button class="btn btn-outline" onclick="abrirPendencias()" title="Pendências administrativas">📌 Pendências</button>
 </div>
 
 <div class="container">
   <div class="cards" id="cardsContainer"></div>
+  <div class="grupos" id="gruposContainer"></div>
 
   <div class="charts">
     <div class="chart-box"><h3>Distribuição por Posto/Graduação</h3><div class="chart-wrap desktop-only"><canvas id="chartPatente"></canvas></div><div id="mobilePatente" class="mobile-chart-alt"></div></div>
@@ -566,13 +639,25 @@ body.view-mode .edit-only{display:none !important}
 <!-- MODAL ADD/EDIT -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
-    <h2><span id="modalTitle">Adicionar Militar</span><button class="close" onclick="closeModal()">&times;</button></h2>
+    <style>
+      .aviso-planilha { background:#1e3450; border-left:4px solid #ff9800; color:#cfe0f5;
+        padding:10px 14px; border-radius:6px; margin-bottom:14px; font-size:13px; line-height:1.5; }
+      .form-group input:disabled, .form-group select:disabled {
+        opacity:.55; cursor:not-allowed; background:#16233a; }
+      .form-group.travado label::after { content:' F512'; font-size:11px; opacity:.7; }
+    </style>
+    <h2><span id="modalTitle">Abono e Observação</span><button class="close" aria-label="Fechar" onclick="closeModal()">&times;</button></h2>
+    <div class="aviso-planilha">
+      📋 Os dados do militar vêm da planilha <strong>EFETIVO 2025</strong> e só podem ser
+      alterados lá. Aqui você edita apenas <strong>Em Abono Desde</strong> e <strong>Observação</strong>,
+      que existem só no dashboard.
+    </div>
     <div class="form-grid">
       <div class="form-group">
         <label>Graduação/Patente *</label>
         <select id="fGh">
           <option value="">Selecione...</option>
-          <option>TEN CEL PM</option><option>MAJ PM</option><option>CAP PM</option>
+          <option>CEL PM</option><option>TEN CEL PM</option><option>MAJ PM</option><option>CAP PM</option>
           <option>1 TEN PM</option><option>2 TEN PM</option><option>ASP OF PM</option>
           <option>SUBTEN PM</option><option>1 SGT PM</option><option>2 SGT PM</option>
           <option>3 SGT PM</option><option>CB PM</option><option>SD PM</option>
@@ -678,47 +763,57 @@ body.view-mode .edit-only{display:none !important}
 </div>
 
 <!-- MODAL TENDÊNCIA -->
-<div class="tool-overlay" id="tendenciaOverlay">
+<div class="tool-overlay" id="tendenciaOverlay" role="dialog" aria-modal="true" aria-label="Tendência do efetivo">
   <div class="tool-modal">
     <div class="tool-head">
       <h2>📈 Tendência do Efetivo</h2>
-      <button class="close-x" onclick="fecharTool('tendenciaOverlay')">×</button>
+      <button class="close-x" aria-label="Fechar painel" onclick="fecharTool('tendenciaOverlay')">×</button>
     </div>
     <div class="tool-body" id="tendenciaBody"></div>
   </div>
 </div>
 
 <!-- MODAL ARMAMENTO -->
-<div class="tool-overlay" id="armamentoOverlay">
+<div class="tool-overlay" id="pendenciasOverlay" role="dialog" aria-modal="true" aria-label="Pendências administrativas">
+  <div class="tool-modal">
+    <div class="tool-head">
+      <h2>📌 Pendências Administrativas</h2>
+      <button class="close-x" aria-label="Fechar painel" onclick="fecharTool('pendenciasOverlay')">×</button>
+    </div>
+    <div class="tool-body" id="pendenciasBody"></div>
+  </div>
+</div>
+
+<div class="tool-overlay" id="armamentoOverlay" role="dialog" aria-modal="true" aria-label="Controle de armamento">
   <div class="tool-modal">
     <div class="tool-head">
       <h2>🔫 Controle de Armamento</h2>
-      <button class="close-x" onclick="fecharTool('armamentoOverlay')">×</button>
+      <button class="close-x" aria-label="Fechar painel" onclick="fecharTool('armamentoOverlay')">×</button>
     </div>
     <div class="tool-body" id="armamentoBody"></div>
   </div>
 </div>
 
 <!-- MODAL LOG -->
-<div class="tool-overlay" id="logOverlay">
+<div class="tool-overlay" id="logOverlay" role="dialog" aria-modal="true" aria-label="Log de alterações">
   <div class="tool-modal">
     <div class="tool-head">
       <h2>📝 Log de Alterações</h2>
-      <button class="close-x" onclick="fecharTool('logOverlay')">×</button>
+      <button class="close-x" aria-label="Fechar painel" onclick="fecharTool('logOverlay')">×</button>
     </div>
     <div class="tool-body" id="logBody"></div>
   </div>
 </div>
 
 <!-- MODAL BOLETIM -->
-<div class="tool-overlay" id="boletimOverlay">
+<div class="tool-overlay" id="boletimOverlay" role="dialog" aria-modal="true" aria-label="Boletim diário">
   <div class="tool-modal">
     <div class="tool-head">
       <h2>📋 Boletim Diário</h2>
       <div class="actions">
         <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir / PDF</button>
       </div>
-      <button class="close-x" onclick="fecharTool('boletimOverlay')">×</button>
+      <button class="close-x" aria-label="Fechar painel" onclick="fecharTool('boletimOverlay')">×</button>
     </div>
     <div class="tool-body" id="boletimBody"></div>
   </div>
@@ -732,11 +827,11 @@ const STORAGE_KEY      = 'bepe_efetivo_data';
 const DATA_VERSION_KEY = 'bepe_efetivo_version';
 const PLACEHOLDER_SVG  = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%231e3450'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%23445566'/%3E%3Cellipse cx='20' cy='34' rx='12' ry='9' fill='%23445566'/%3E%3C/svg%3E";
 
-const OFICIAIS_KW      = ['TEN CEL','MAJ','CAP','1 TEN','2 TEN','ASP OF'];
+const OFICIAIS_KW      = ['CEL','TEN CEL','MAJ','CAP','1 TEN','2 TEN','ASP OF'];
 const EXCLUIR_TROPA_FN = ['GUARDA','VISIBILIDADE','ADJ. FISCAL DE DIA','ADJ FISCAL DE DIA','FISCAL DE DIA','TROPA / P4'];
 const EXCLUIR_TROPA_RG = ['60641'];
-const GRAD_ORDER       = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
-const ORDEM_PATENTE    = {'TEN CEL PM':1,'MAJ PM':2,'CAP PM':3,'1 TEN PM':4,'1TEN PM':4,'2 TEN PM':5,'2TEN PM':5,'ASP OF PM':6,'SUBTEN PM':7,'SUB TEN PM':7,'1 SGT PM':8,'1SGT PM':8,'2 SGT PM':9,'2SGT PM':9,'3 SGT PM':10,'3SGT PM':10,'CB PM':11,'SD PM':12};
+const GRAD_ORDER       = ['CEL PM','CEL. PM','TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
+const ORDEM_PATENTE    = {'CEL PM':1,'CEL. PM':1,'TEN CEL PM':2,'MAJ PM':3,'CAP PM':4,'1 TEN PM':5,'1TEN PM':5,'2 TEN PM':6,'2TEN PM':6,'ASP OF PM':7,'SUBTEN PM':8,'SUB TEN PM':8,'1 SGT PM':9,'1SGT PM':9,'2 SGT PM':10,'2SGT PM':10,'3 SGT PM':11,'3SGT PM':11,'CB PM':12,'SD PM':13};
 
 // ─── ESTADO ─────────────────────────────────────────────────────────────────
 let efetivo        = [];
@@ -763,6 +858,10 @@ db.ref('.info/connected').on('value', snap => {
 });
 
 // ─── FUNÇÕES DE GRUPO ────────────────────────────────────────────────────────
+// A planilha traz SIM / NAO / vazio -- e ocasionalmente texto na coluna errada.
+function equipOk(v)  { return String(v||'').trim().toUpperCase() === 'SIM'; }
+function equipNao(v) { const t = String(v||'').trim().toUpperCase(); return t === 'NÃO' || t === 'NAO'; }
+
 function isOficial(m)    { return OFICIAIS_KW.some(k => (m.gh||'').toUpperCase().includes(k)); }
 function isTropaGrupo(m) {
   return m.cia === 'CIA' && !isOficial(m)
@@ -860,9 +959,19 @@ function deleteFoto(rg) {
 }
 
 // ─── DADOS ────────────────────────────────────────────────────────────────────
+// Impressao digital do conteudo, nao apenas a contagem de registros.
+// Com a contagem, entrar 1 militar e sair 1 no mesmo dia mantinha o mesmo
+// numero e o navegador continuava servindo o cache antigo.
+function hashDados(arr) {
+  const txt = JSON.stringify(arr);
+  let h = 5381;
+  for (let i = 0; i < txt.length; i++) h = ((h * 33) ^ txt.charCodeAt(i)) >>> 0;
+  return arr.length + '-' + h.toString(36);
+}
+
 function loadData() {
   const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
-  const currentVersion = String(DADOS_ORIGINAIS.length);
+  const currentVersion = hashDados(DADOS_ORIGINAIS);
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved && savedVersion === currentVersion) {
     try { efetivo = JSON.parse(saved); } catch(e) { efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS)); }
@@ -889,11 +998,9 @@ function loadData() {
           refreshAll();
           showToast('🔄 Dados atualizados em tempo real!', 'info');
         }
-        // Registrar horário real da última sincronização no cabeçalho
-        const hd = document.getElementById('headerDate');
-        if (hd) hd.textContent =
-          new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase()
-          + ' — Sincronizado às ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        // A hora da sincronização vem do Apps Script (ver syncRef abaixo).
+        // Antes carimbava new Date() aqui, ou seja, o relógio de quem abria a
+        // página — o cabeçalho parecia atual mesmo com a sync parada há dias.
         firebaseReady = true;
       }
     } else {
@@ -908,6 +1015,40 @@ function loadData() {
     if (badge) { badge.style.background = '#f44336'; badge.textContent = '❌ ERRO'; }
   });
 }
+
+// Hora REAL da ultima sincronizacao planilha -> Firebase, gravada pelo Apps Script.
+// Se o gatilho parar, o cabecalho passa a denunciar em vez de mentir.
+function renderUltimaSync(iso) {
+  const hd = document.getElementById('headerDate');
+  if (!hd) return;
+
+  if (!iso) {
+    hd.textContent = 'Aguardando primeira sincronização da planilha';
+    hd.title = 'O Apps Script ainda não gravou nenhum carimbo de sincronização.';
+    return;
+  }
+
+  const quando = new Date(iso);
+  if (isNaN(quando)) { hd.textContent = 'Data de sincronização inválida'; return; }
+
+  const minutos = Math.floor((Date.now() - quando) / 60000);
+  const data = quando.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+  const hora = quando.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  // O gatilho roda a cada 10 min; acima de 45 min algo esta errado.
+  let aviso = '';
+  if (minutos > 1440)     aviso = ' ⚠️ há ' + Math.floor(minutos/1440) + ' dia(s)';
+  else if (minutos > 45)  aviso = ' ⚠️ há ' + Math.floor(minutos/60) + 'h';
+
+  hd.textContent = data + ' — Sincronizado às ' + hora + aviso;
+  hd.title = aviso
+    ? 'A planilha não sincroniza desde ' + quando.toLocaleString('pt-BR') + '. Os dados podem estar desatualizados.'
+    : 'Sincronizado com a planilha em ' + quando.toLocaleString('pt-BR');
+  hd.style.color = aviso ? '#ff9800' : '';
+}
+
+syncRef.on('value', snap => renderUltimaSync(snap.val()),
+           () => renderUltimaSync(null));
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(efetivo));
@@ -939,58 +1080,100 @@ function calcMetrics() {
   const aptoAOutros= efetivo.filter(m => isCiaOutros(m) && getCategoria(m) === 'oper').length;
   const oper       = t > 0 ? (aptoA / t * 100).toFixed(1) : '0.0';
 
+  // Equipamento: "pronto pra rua" exige apto CAT A + arma E colete confirmados.
+  // Campo em branco NAO e' o mesmo que "nao tem" -- e' desconhecido, e por isso
+  // vira uma terceira contagem em vez de inflar os que faltam.
+  const aptosA        = efetivo.filter(m => getCategoria(m) === 'oper');
+  const prontoRua     = aptosA.filter(m => equipOk(m.arma) && equipOk(m.colete)).length;
+  const equipFalta    = aptosA.filter(m => equipNao(m.arma) || equipNao(m.colete)).length;
+  const equipSemInfo  = aptosA.length - prontoRua - equipFalta;
+  const prontoPct     = aptosA.length > 0 ? (prontoRua / aptosA.length * 100).toFixed(1) : '0.0';
+
   const patentes = {};
   efetivo.forEach(m => { if (getCategoria(m) !== 'tempocerto') patentes[m.gh] = (patentes[m.gh] || 0) + 1; });
   const setores = {};
   efetivo.forEach(m => { setores[m.cia] = (setores[m.cia] || 0) + 1; });
 
-  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOutros, aptoB, aptoC, lts, rr, reforma, fer, tc, abono, ofAtivos, pr, oper, patentes, setores };
+  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOutros, aptoB, aptoC, lts, rr, reforma, fer, tc, abono, ofAtivos, pr, oper, patentes, setores,
+           prontoRua, equipFalta, equipSemInfo, prontoPct };
 }
 
 // ─── CARDS ────────────────────────────────────────────────────────────────────
+// Limiares de prontidao. Sao PROPOSTA -- ajuste conforme o criterio do batalhao.
+// Ficam nomeados aqui em vez de espalhados no meio do HTML justamente para
+// serem faceis de revisar.
+const LIMIARES = {
+  operacionalidade: { ok: 80, atencao: 65 },
+  pronto:           { ok: 70, atencao: 50 },
+};
+
+function estado(valor, limiar) {
+  if (valor >= limiar.ok)      return 'est-ok';
+  if (valor >= limiar.atencao) return 'est-warn';
+  return 'est-crit';
+}
+
+function chip(rotulo, valor, alvo, dica) {
+  return `<div class="chip" role="button" tabindex="0" title="${dica || rotulo}"
+    onclick="${alvo}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${alvo}}">
+    <span class="cn">${rotulo}</span><span class="cv">${valor}</span>
+  </div>`;
+}
+
 function renderCards(m) {
+  const oper   = parseFloat(m.oper);
+  const pronto = parseFloat(m.prontoPct);
+
+  // ── Nivel 1: as tres respostas que o comando precisa antes de tudo ────────
   document.getElementById('cardsContainer').innerHTML = `
-    <div class="card total" onclick="window.scrollTo({top:0,behavior:'smooth'})">
-      <div class="number">${m.t}</div><div class="label">Efetivo Total</div>
-      <div class="sub">${m.ofAtivos} Of · ${m.pr} Praças <span style="color:#8D6E63;font-size:.65rem">(TC: ${m.tc})</span></div>
+    <div class="card" role="button" tabindex="0" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+      <div class="number">${m.t}</div>
+      <div class="label">Efetivo Total</div>
+      <div class="sub">${m.ofAtivos} oficiais · ${m.pr} praças · ${m.tc} tempo certo</div>
     </div>
-    <div class="card oficiais-card" onclick="irPara('secOficiais')">
-      <div class="number">${m.ofAtivos}</div><div class="label">Oficiais</div><div class="sub">Comando e gestão</div>
+    <div class="card ${estado(oper, LIMIARES.operacionalidade)}" role="button" tabindex="0"
+         onclick="irPara('secTropa')" title="Aptos CAT A sobre o efetivo total">
+      <div class="number">${m.oper}%</div>
+      <div class="label">Operacionalidade</div>
+      <div class="sub">${m.aptoA} aptos de ${m.t}</div>
+      <div class="medidor"><i style="width:${Math.min(oper,100)}%"></i></div>
     </div>
-    <div class="card tropa" onclick="irPara('secTropa')">
-      <div class="number">${m.aptoATropa}</div><div class="label">Apto A Tropa</div><div class="sub">Somente tropa CIA</div>
+    <div class="card ${estado(pronto, LIMIARES.pronto)}" role="button" tabindex="0"
+         onclick="abrirArmamento()" title="Apto CAT A com arma E colete acautelados">
+      <div class="number">${m.prontoRua}</div>
+      <div class="label">Pronto</div>
+      <div class="sub">${m.prontoPct}% dos aptos · ${m.equipFalta} sem equip. · ${m.equipSemInfo} sem info</div>
+      <div class="medidor"><i style="width:${Math.min(pronto,100)}%"></i></div>
     </div>
-    <div class="card cia-outros" onclick="irPara('secCiaOutros')">
-      <div class="number">${m.aptoAOutros}</div><div class="label">CIA Outros</div><div class="sub">Guarda · Visib. · Adj. FD</div>
+  `;
+
+  // ── Nivel 2: o mesmo dado, com peso visual subordinado ────────────────────
+  document.getElementById('gruposContainer').innerHTML = `
+    <div class="grupo">
+      <h4>Composição</h4>
+      <div class="chips">
+        ${chip('Oficiais',      m.ofAtivos,    "irPara('secOficiais')",  'Comando e gestão')}
+        ${chip('Apto A tropa',  m.aptoATropa,  "irPara('secTropa')",     'Somente tropa CIA')}
+        ${chip('CIA outros',    m.aptoAOutros, "irPara('secCiaOutros')", 'Guarda · Visibilidade · Adj. Fiscal de Dia')}
+        ${chip('CCSV',          m.aptoACCSV,   "irPara('secCCSV')",      'Apoio administrativo')}
+      </div>
     </div>
-    <div class="card ccsv-card" onclick="irPara('secCCSV')">
-      <div class="number">${m.aptoACCSV}</div><div class="label">CCSV</div><div class="sub">Apoio administrativo</div>
+    <div class="grupo">
+      <h4>Restrições</h4>
+      <div class="chips">
+        ${chip('Apto cat B',    m.aptoB, "irPara('secAptoB')", 'Restrição parcial')}
+        ${chip('Apto cat C',    m.aptoC, "irPara('secAptoC')", 'Restrição maior')}
+        ${chip('Abono perm.',   m.abono, "irPara('secAbono')", 'Em gozo de abono de permanência')}
+        ${chip('Aguardando RR', m.rr,    "irPara('secAGRR')",  'Aguardando reserva remunerada')}
+      </div>
     </div>
-    <div class="card abono-card" onclick="irPara('secAbono')">
-      <div class="number">${m.abono}</div><div class="label">Abono Permanência</div><div class="sub">Em gozo de abono</div>
-    </div>
-    <div class="card restrito" onclick="irPara('secAptoB')">
-      <div class="number">${m.aptoB}</div><div class="label">Apto Cat B</div><div class="sub">Restritos</div>
-    </div>
-    <div class="card restrito-c" onclick="irPara('secAptoC')">
-      <div class="number">${m.aptoC}</div><div class="label">Apto Cat C</div><div class="sub">Restritos</div>
-    </div>
-    <div class="card afastado" onclick="irPara('secLTS')">
-      <div class="number">${m.lts + m.reforma}</div><div class="label">Afastados</div>
-      <div class="sub">${m.lts} LTS · ${m.reforma} Reforma</div>
-    </div>
-    <div class="card agrr-card" onclick="irPara('secAGRR')">
-      <div class="number">${m.rr}</div><div class="label">Aguardando R.R</div>
-      <div class="sub">Aguardando reserva remunerada</div>
-    </div>
-    <div class="card ferias" onclick="irPara('secFerias')">
-      <div class="number">${m.fer}</div><div class="label">De Férias</div><div class="sub">Em gozo de férias</div>
-    </div>
-    <div class="card tc-card" onclick="irPara('secTC')">
-      <div class="number">${m.tc}</div><div class="label">Tempo Certo</div><div class="sub">Fora da contagem total</div>
-    </div>
-    <div class="card oper">
-      <div class="number">${m.oper}%</div><div class="label">Operacionalidade</div><div class="sub">${m.aptoA} de ${m.t}</div>
+    <div class="grupo">
+      <h4>Afastamentos</h4>
+      <div class="chips">
+        ${chip('Afastados',   m.lts + m.reforma, "irPara('secLTS')",    `${m.lts} em LTS · ${m.reforma} aguardando reforma`)}
+        ${chip('De férias',   m.fer,             "irPara('secFerias')", 'Em gozo de férias')}
+        ${chip('Tempo certo', m.tc,              "irPara('secTC')",     'Fora da contagem do efetivo total')}
+      </div>
     </div>
   `;
 }
@@ -999,7 +1182,7 @@ function renderCards(m) {
 let chartPatente = null, chartSetor = null, chartCCSV = null, chartCIA = null;
 
 function renderCharts(m) {
-  const patOrder  = ['TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
+  const patOrder  = ['CEL PM','CEL. PM','TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
   const patLabels = patOrder.filter(p => m.patentes[p]);
   const patValues = patLabels.map(p => m.patentes[p] || 0);
   const patColors = patLabels.map(p => OFICIAIS_KW.some(k => p.includes(k)) ? '#FF9800' : '#2196F3');
@@ -1142,7 +1325,7 @@ function categoriaTag(m) {
 function buildGradHTML(list, grad, cssClass, showStatusCol) {
   const searching = hasSearch();
   const rows = list.map((m, i) => `<tr>
-    ${isAdmin ? `<td><input type="checkbox" class="cb row-cb" data-idx="${m._idx}" onchange="updateSelection()"></td>` : ''}
+
     <td style="padding:4px 6px"><img class="foto-avatar foto-row" data-rg="${(m.rg||'').replace(/"/g,'')}" src="${PLACEHOLDER_SVG}" alt=""></td>
     <td style="color:#667788">${i+1}</td>
     <td>${m.rg||'—'}</td>
@@ -1151,11 +1334,11 @@ function buildGradHTML(list, grad, cssClass, showStatusCol) {
     <td>${m.funcao||'—'}</td>
     <td>${sitTag(m.sit)}${showStatusCol ? ' ' + categoriaTag(m) : ''}</td>
     <td>${m.arma === 'SIM' ? '<span class="tag tag-green">SIM</span>' : m.arma === 'NÃO' ? '<span class="tag tag-red">NÃO</span>' : '—'}</td>
-    ${isAdmin ? `<td><button class="btn btn-outline" onclick="editarMilitar(${m._idx})">Editar</button> <button class="btn btn-danger" onclick="excluirUm(${m._idx})">Excluir</button></td>` : ''}
+    ${isAdmin ? `<td><button class="btn btn-outline" onclick="editarMilitar(${m._idx})">Abono/Obs</button></td>` : ''}
   </tr>`).join('');
 
   return `<div class="grad-bar ${cssClass}">
-    <div class="grad-bar-header${searching ? ' active' : ''}" onclick="toggleGrad(this)">
+    <div class="grad-bar-header${searching ? ' active' : ''}" onclick="toggleGrad(this)" role="button" tabindex="0" aria-expanded="${searching ? 'true' : 'false'}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleGrad(this);}">
       <div class="grad-bar-left">
         <span class="grad-bar-icon">&#9654;</span>
         <span class="grad-bar-rank">${grad}</span>
@@ -1166,7 +1349,6 @@ function buildGradHTML(list, grad, cssClass, showStatusCol) {
     <div class="grad-bar-body${searching ? ' open' : ''}">
       <div class="grad-bar-list">
         <table><thead><tr>
-          ${isAdmin ? '<th style="width:30px"><input type="checkbox" class="cb grad-cb-all" onchange="toggleGradAll(this)"></th>' : ''}
           <th style="width:42px">Foto</th>
           <th>#</th><th>RG</th><th>Nome</th><th>Setor</th><th>Função</th><th>Situação</th><th>Arma</th>
           ${isAdmin ? '<th>Ações</th>' : ''}
@@ -1305,6 +1487,8 @@ function toggleGrad(header) {
   const body = header.nextElementSibling;
   body.classList.toggle('open');
   header.classList.toggle('active');
+  // Mantem o estado anunciado em sincronia com o visual.
+  header.setAttribute('aria-expanded', body.classList.contains('open') ? 'true' : 'false');
   if (body.classList.contains('open')) loadFotosVisiveis(body);
 }
 
@@ -1315,12 +1499,9 @@ function toggleGradAll(cb) {
 }
 
 // ─── SELEÇÃO ─────────────────────────────────────────────────────────────────
-function updateSelection() {
-  const checked = document.querySelectorAll('.row-cb:checked');
-  const btn = document.getElementById('btnExcluir');
-  if (checked.length > 0) { btn.style.display = 'flex'; document.getElementById('selCount').textContent = checked.length; }
-  else                     { btn.style.display = 'none'; }
-}
+// A selecao em massa existia para excluir militares, o que agora e' feito
+// apenas pela planilha. Mantida como no-op porque refreshAll() ainda chama.
+function updateSelection() {}
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
 function openAddModal() {
@@ -1341,10 +1522,24 @@ function openAddModal() {
   document.getElementById('modalOverlay').classList.add('active');
 }
 
+// Os 12 campos que a planilha manda. O dashboard nunca escreve neles.
+const CAMPOS_DA_PLANILHA = ['fGh','fRg','fNome','fCia','fFuncao','fSit','fId','fArma','fColete','fDe','fAte'];
+
+function travarCamposDaPlanilha() {
+  CAMPOS_DA_PLANILHA.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = true;
+    el.title = 'Este campo vem da planilha EFETIVO 2025 e só pode ser alterado lá.';
+    const grupo = el.closest('.form-group');
+    if (grupo) grupo.classList.add('travado');
+  });
+}
+
 function editarMilitar(idx) {
   editingIdx = idx;
   const m = efetivo[idx];
-  document.getElementById('modalTitle').textContent = 'Editar Militar';
+  document.getElementById('modalTitle').textContent = 'Abono e Observação';
   document.getElementById('fGh').value     = m.gh || '';
   document.getElementById('fRg').value     = m.rg || '';
   document.getElementById('fNome').value   = m.nome || '';
@@ -1382,6 +1577,7 @@ function editarMilitar(idx) {
       });
     }
   }
+  travarCamposDaPlanilha();
   document.getElementById('modalOverlay').classList.add('active');
 }
 
@@ -1410,8 +1606,21 @@ function salvarMilitar() {
     ferias: ''
   };
 
-  if (editingIdx >= 0) { efetivo[editingIdx] = mil; showToast(`${nome} atualizado com sucesso`, 'success'); }
-  else                 { efetivo.push(mil); showToast(`${nome} adicionado ao efetivo`, 'success'); }
+  if (editingIdx >= 0) {
+    // A planilha e' a fonte da verdade. Preservamos TUDO que veio dela e
+    // aplicamos apenas os dois campos que pertencem ao dashboard.
+    // Antes o registro era reconstruido do zero com 'ferias: ""', o que
+    // apagava as ferias vencidas de quem fosse editado -- e o texto dizia
+    // "atualizado com sucesso" enquanto isso.
+    efetivo[editingIdx] = Object.assign({}, efetivo[editingIdx], {
+      abono: mil.abono,
+      obs:   mil.obs
+    });
+    showToast(`${nome}: abono e observação atualizados`, 'success');
+  } else {
+    efetivo.push(mil);
+    showToast(`${nome} adicionado ao efetivo`, 'success');
+  }
 
   efetivo.sort((a, b) => {
     const oa = ORDEM_PATENTE[(a.gh||'').trim().toUpperCase()] || 99;
@@ -2000,11 +2209,22 @@ document.addEventListener('click', (e) => {
 })();
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
-document.getElementById('headerDate').textContent =
-  new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase() + ' — Atualizado agora';
+// Placeholder honesto: quem preenche de verdade e' o syncRef, com a hora
+// que o Apps Script gravou. Dizia 'Atualizado agora' antes mesmo de consultar.
+document.getElementById('headerDate').textContent = 'Carregando…';
 
 loadData();
 refreshAll();
+
+// PWA: instalavel no celular e utilizavel offline. O service worker usa rede
+// primeiro para o HTML, entao estar instalado nao prende ninguem numa versao
+// velha do dashboard -- online sempre chega o codigo mais novo.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .catch(err => console.warn('Service worker nao registrado:', err.message));
+  });
+}
 
 let resizeTimer;
 window.addEventListener('resize', () => {
@@ -2329,6 +2549,154 @@ function renderTendencia(arr) {
   });
 }
 
+// ─── PENDÊNCIAS ADMINISTRATIVAS ──────────────────────────────────────────────
+
+// O texto de ferias e' digitado livremente na planilha e vem cheio de numeros de
+// processo (SEI 122053090, CI N 92055460). Extrair "20\d\d" direto capturava
+// pedacos desses numeros e inventava anos como 2053 e 2066. Removemos qualquer
+// sequencia de 5+ digitos antes de procurar o ano.
+function anosCitadosFerias(txt) {
+  const limpo = String(txt || '').replace(/\d{5,}/g, ' ');
+  const anos  = (limpo.match(/\b20[0-3]\d\b/g) || []).map(Number);
+  return [...new Set(anos)].sort((a, b) => a - b);
+}
+
+// Alguns registros dizem o contrario: "sem ferias pendentes", "nao possui".
+const SEM_PENDENCIA_RX = /(sem|n[aã]o\s+(possui|h[aá]|tem))\s+.*f[eé]rias|f[eé]rias.*(n[aã]o\s+pendente|em dia|quitada)|sem\s+pend[eê]nc/i;
+
+function temPendenciaFerias(m) {
+  const t = String(m.ferias || '').trim();
+  return t !== '' && !SEM_PENDENCIA_RX.test(t);
+}
+
+function esc(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function pdLinha(m, tag, classe, texto) {
+  const nome = esc(m.nome || '');
+  return `<div class="pd-row ${classe}" onclick="pdBuscar('${nome.replace(/'/g,"\'")}')" style="cursor:pointer">
+    <div class="pd-top">
+      <span class="pd-nome">${esc(m.gh || '')} ${nome}</span>
+      <span class="pd-tag ${classe}">${esc(tag)}</span>
+    </div>
+    ${texto ? `<div class="pd-txt">${esc(texto)}</div>` : ''}
+  </div>`;
+}
+
+// Reaproveita a busca que ja' existe: rola a tela ate' o militar.
+function pdBuscar(nome) {
+  fecharTool('pendenciasOverlay');
+  const inp = document.getElementById('searchInput');
+  if (!inp) return;
+  inp.value = nome;
+  onBuscar();
+}
+
+function abrirPendencias() {
+  document.getElementById('pendenciasOverlay').classList.add('active');
+  renderPendencias();
+}
+
+function renderPendencias() {
+  const anoAtual = new Date().getFullYear();
+  let html = '';
+
+  // ── 1. FÉRIAS ──────────────────────────────────────────────────────────────
+  const comFerias  = efetivo.filter(temPendenciaFerias);
+  const semTexto   = efetivo.filter(m => !String(m.ferias || '').trim()).length;
+  const declaramOk = efetivo.filter(m =>
+    String(m.ferias || '').trim() && SEM_PENDENCIA_RX.test(m.ferias)).length;
+
+  const ordenadas = comFerias.map(m => {
+    const anos = anosCitadosFerias(m.ferias);
+    return { m, maisAntigo: anos.length ? anos[0] : null };
+  }).sort((a, b) => {
+    if (a.maisAntigo === null) return 1;
+    if (b.maisAntigo === null) return -1;
+    return a.maisAntigo - b.maisAntigo;
+  });
+
+  html += `<div class="pd-sec"><h3>🏖️ Férias em aberto <span class="n">${comFerias.length}</span></h3>`;
+  html += (ordenadas.map(({ m, maisAntigo }) => {
+    let classe = '', tag = 'ano não identificado';
+    if (maisAntigo !== null) {
+      const idade = anoAtual - maisAntigo;
+      tag = 'desde ' + maisAntigo;
+      if (idade >= 5)      classe = 'crit';
+      else if (idade >= 2) classe = 'aten';
+    }
+    return pdLinha(m, tag, classe, m.ferias);
+  }).join('')) || '<div class="pd-vazio">Nenhuma pendência de férias.</div>';
+  html += `<div class="pd-nota">O campo de férias é texto livre digitado na planilha, então o dashboard
+    <strong>não calcula dias devidos</strong> — mostra o registro como está e ordena pelo ano mais antigo citado.
+    <strong>${declaramOk}</strong> militares declaram não ter pendência e
+    <strong>${semTexto}</strong> estão sem nenhuma informação preenchida (o que não significa estar em dia).</div></div>`;
+
+  // ── 2. ABONO DE PERMANÊNCIA ────────────────────────────────────────────────
+  const abonos = efetivo.filter(m => String(m.abono || '').trim())
+    .map(m => ({ m, d: parseDataBR(m.abono) }))
+    .sort((a, b) => (a.d && b.d) ? a.d - b.d : 0);
+
+  html += `<div class="pd-sec"><h3>🎖️ Abono de permanência <span class="n">${abonos.length}</span></h3>`;
+  html += (abonos.map(({ m, d }) => {
+    if (!d) return pdLinha(m, 'data ilegível', 'aten', 'Valor gravado: ' + m.abono);
+    const meses = Math.floor((Date.now() - d) / (1000 * 60 * 60 * 24 * 30.44));
+    const quando = d.toLocaleDateString('pt-BR');
+    if (meses < 0) return pdLinha(m, 'a partir de ' + quando, '', null);
+    return pdLinha(m, 'desde ' + quando, meses >= 24 ? 'aten' : '',
+      meses >= 1 ? `Há ${meses} ${meses === 1 ? 'mês' : 'meses'} em abono` : 'Iniciado neste mês');
+  }).join('')) || '<div class="pd-vazio">Ninguém em abono de permanência.</div>';
+  html += '</div>';
+
+  // ── 3. AGUARDANDO R.R ──────────────────────────────────────────────────────
+  const rr = efetivo.filter(m => getCategoria(m) === 'agrr');
+  html += `<div class="pd-sec"><h3>⏳ Aguardando reserva remunerada <span class="n">${rr.length}</span></h3>`;
+  html += (rr.map(m => pdLinha(m, m.sit || '—', 'aten', m.funcao || null)).join(''))
+    || '<div class="pd-vazio">Ninguém aguardando R.R.</div>';
+  html += '</div>';
+
+  // ── 4. DADOS QUE O DASHBOARD NÃO CONSEGUE LER ──────────────────────────────
+  // Uma data malformada na planilha (ex.: "31/082026" sem a barra) faz o militar
+  // sumir dos alertas de LTS sem nenhum aviso. Aqui ela aparece.
+  const quebrados = [];
+  efetivo.forEach(m => {
+    const cat = getCategoria(m);
+    const afastado = (cat === 'lts' || cat === 'ferias' || cat === 'reforma');
+    if (afastado && String(m.ate || '').trim() && !parseDataBR(m.ate))
+      quebrados.push({ m, campo: 'ATÉ', valor: m.ate });
+    if (afastado && String(m.de || '').trim() && m.de !== 'TEMPO' && !parseDataBR(m.de))
+      quebrados.push({ m, campo: 'DE', valor: m.de });
+    if (String(m.abono || '').trim() && !parseDataBR(m.abono))
+      quebrados.push({ m, campo: 'ABONO', valor: m.abono });
+  });
+
+  // Colunas de equipamento so' aceitam SIM, NAO ou vazio. Qualquer outra coisa
+  // e' texto que caiu na coluna errada da planilha.
+  const equipInvalido = [];
+  efetivo.forEach(m => {
+    ['arma', 'colete'].forEach(campo => {
+      const t = String(m[campo] || '').trim().toUpperCase();
+      if (t && t !== 'SIM' && t !== 'NÃO' && t !== 'NAO')
+        equipInvalido.push({ m, campo: campo.toUpperCase(), valor: m[campo] });
+    });
+  });
+
+  const inconsistencias = quebrados.length + equipInvalido.length;
+  html += `<div class="pd-sec"><h3>⚠️ Dados inconsistentes na planilha <span class="n">${inconsistencias}</span></h3>`;
+  html += (quebrados.map(({ m, campo, valor }) =>
+    pdLinha(m, campo, 'crit', `Valor "${valor}" não é uma data válida — este militar fica de fora dos alertas automáticos até ser corrigido na planilha.`)
+  ).join(''));
+  html += (equipInvalido.map(({ m, campo, valor }) =>
+    pdLinha(m, campo, 'crit', `A coluna ${campo} deveria conter apenas SIM ou NÃO, mas contém: "${valor}". Enquanto estiver assim, conta como equipamento não confirmado.`)
+  ).join(''));
+  if (inconsistencias === 0) html += '<div class="pd-vazio">Nenhuma inconsistência encontrada. 👍</div>';
+  html += '</div>';
+
+  document.getElementById('pendenciasBody').innerHTML = html;
+}
+
 // ─── ARMAMENTO ───────────────────────────────────────────────────────────────
 function abrirArmamento() {
   document.getElementById('armamentoOverlay').classList.add('active');
@@ -2621,22 +2989,22 @@ window.salvarMilitar = function() {
     sit:    document.getElementById('fSit').value,
     arma:   document.getElementById('fArma').value,
     colete: document.getElementById('fColete').value,
-    abono:  document.getElementById('fAbono').value
+    abono:  document.getElementById('fAbono').value,
+    obs:    document.getElementById('fObs').value.trim()
   };
 
+  // Patente, funcao, arma, situacao e colete vem da planilha e nao podem mais
+  // mudar por aqui -- logar essas mudancas seria registrar algo impossivel.
+  // Sobram os dois campos que pertencem ao dashboard.
   if (ehEdicao && antes) {
     const mudancas = [];
-    if (antes.sit !== depois.sit)       mudancas.push(`Situação: ${antes.sit} → <strong>${depois.sit}</strong>`);
-    if (antes.gh !== depois.gh)         mudancas.push(`Patente: ${antes.gh} → <strong>${depois.gh}</strong>`);
-    if (antes.funcao !== depois.funcao) mudancas.push(`Função: ${antes.funcao} → <strong>${depois.funcao}</strong>`);
-    if (antes.arma !== depois.arma)     mudancas.push(`Arma: ${antes.arma} → <strong>${depois.arma}</strong>`);
-    if (antes.colete !== depois.colete) mudancas.push(`Colete: ${antes.colete} → <strong>${depois.colete}</strong>`);
-    if ((antes.abono||'') !== (depois.abono||'')) mudancas.push(`Abono: <strong>${depois.abono?'cadastrado':'removido'}</strong>`);
+    if ((antes.abono||'') !== (depois.abono||''))
+      mudancas.push(`Abono: <strong>${depois.abono ? 'cadastrado' : 'removido'}</strong>`);
+    if ((antes.obs||'') !== (depois.obs||''))
+      mudancas.push(`Observação atualizada`);
     if (mudancas.length > 0) {
       registrarLog('edit', `<strong>${depois.nome}</strong> — ${mudancas.join(' · ')}`);
     }
-  } else if (efetivo.length > lenAntes) {
-    registrarLog('add', `Novo militar: <strong>${depois.gh} ${depois.nome}</strong> — RG ${depois.rg||'—'} — ${depois.cia}`);
   }
 };
 
