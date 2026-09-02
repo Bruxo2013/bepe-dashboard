@@ -1047,8 +1047,19 @@ function renderUltimaSync(iso) {
   hd.style.color = aviso ? '#ff9800' : '';
 }
 
-syncRef.on('value', snap => renderUltimaSync(snap.val()),
-           () => renderUltimaSync(null));
+// O erro de leitura tem causa diferente de "ainda nao sincronizou": em geral
+// significa que /meta nao esta liberado nas regras do Firebase. Dizer
+// "aguardando" nesse caso mandaria voce esperar por algo que nunca vem.
+syncRef.on('value',
+  snap => renderUltimaSync(snap.val()),
+  err  => {
+    const hd = document.getElementById('headerDate');
+    if (!hd) return;
+    hd.textContent = 'Hora da sincronização indisponível';
+    hd.title = 'Não foi possível ler /meta/ultimaSync no Firebase: ' + (err && err.message ? err.message : 'acesso negado')
+      + '. Libere o caminho /meta nas regras do banco para o cabeçalho exibir a hora real.';
+    hd.style.color = '#F5A524';
+  });
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(efetivo));

@@ -7,10 +7,26 @@
 const FIREBASE_URL = 'https://bepe-dashboard-default-rtdb.firebaseio.com';
 const NOME_ABA     = 'EFETIVO 2025'; // nome exato da aba (sem sensibilidade a maiúsculas)
 
-// Cabeçalho autenticado: o script se identifica como o dono do projeto.
-// Não existe token guardado em lugar nenhum — o Google emite na hora.
-function cabecalhoAuth() {
-  return { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() };
+// Autenticacao pelo segredo do banco.
+//
+// A primeira tentativa foi via ScriptApp.getOAuthToken(), que nao guarda
+// segredo nenhum. O Firebase recusou com "Unauthorized request." porque a
+// planilha roda como bepefetivo@gmail.com, conta que nao tem acesso ao projeto
+// bepe-dashboard. Enquanto as contas nao forem consolidadas, o segredo resolve.
+//
+// O valor fica em Propriedades do Script, nunca no codigo e nunca no GitHub.
+function segredoFirebase() {
+  const s = PropertiesService.getScriptProperties().getProperty('FIREBASE_SECRET');
+  if (!s) {
+    throw new Error('Propriedade FIREBASE_SECRET nao configurada. '
+      + 'Apps Script > Configuracoes do projeto > Propriedades do script.');
+  }
+  return s;
+}
+
+// Monta a URL ja' autenticada. Ex.: urlFB('/efetivo.json')
+function urlFB(caminho) {
+  return FIREBASE_URL + caminho + '?auth=' + encodeURIComponent(segredoFirebase());
 }
 
 // Avisa por e-mail quando a sincronização falha. Sem isso a falha é silenciosa:
@@ -62,6 +78,18 @@ function sincronizarComFirebase() {
     const cabecalho = dados[0].map(normalizar);
     const col       = (nome) => cabecalho.indexOf(normalizar(nome));
 
+    // Aceita variantes do mesmo cabecalho. As colunas de equipamento se chamam
+    // ARMA e COLETE na planilha, mas o script procurava ARMA ACAUTELADA e
+    // COLETE ACAUTELADO -- nao achava, devolvia -1, e os dois campos ficaram
+    // congelados no Firebase sem ninguem perceber.
+    const colAlt = function() {
+      for (var i = 0; i < arguments.length; i++) {
+        var idx = col(arguments[i]);
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+
     const C = {
       gh:     col('GH'),
       rg:     col('RG'),
@@ -72,15 +100,26 @@ function sincronizarComFirebase() {
       sit:    col('SITUACAO SANITARIA'),
       de:     col('DE'),
       ate:    col('ATE'),
-      arma:   col('ARMA ACAUTELADA'),
-      colete: col('COLETE ACAUTELADO'),
-      ferias: col('FERIAS VENCIDAS'),
+      arma:   colAlt('ARMA', 'ARMA ACAUTELADA', 'ARMAMENTO'),
+      colete: colAlt('COLETE', 'COLETE ACAUTELADO'),
+      ferias: colAlt('FERIAS VENCIDAS', 'FERIAS'),
     };
     Logger.log('Colunas detectadas: ' + JSON.stringify(C));
 
+    // Coluna nao encontrada = campo congelado no valor antigo do Firebase.
+    // Antes isso passava despercebido; agora grita no log e por e-mail.
+    const faltando = Object.keys(C).filter(function(k) { return C[k] < 0; });
+    if (faltando.length > 0) {
+      const aviso = 'Colunas nao encontradas na planilha: ' + faltando.join(', ')
+        + '. Esses campos NAO serao atualizados e ficarao com o valor antigo. '
+        + 'Cabecalhos lidos: ' + cabecalho.filter(String).join(' | ');
+      Logger.log('⚠️ ' + aviso);
+      avisarFalha('Coluna ausente na planilha', aviso);
+    }
+
     // 4. Buscar dados atuais do Firebase para preservar abono e obs
-    const fbResp = UrlFetchApp.fetch(FIREBASE_URL + '/efetivo.json', {
-      method: 'get', headers: cabecalhoAuth(), muteHttpExceptions: true
+    const fbResp = UrlFetchApp.fetch(urlFB('/efetivo.json'), {
+      method: 'get', muteHttpExceptions: true
     });
     const mapaFB = {};
     if (fbResp.getResponseCode() === 200) {
@@ -146,10 +185,9 @@ function sincronizarComFirebase() {
     }
 
     // 6. Enviar para o Firebase
-    const putResp = UrlFetchApp.fetch(FIREBASE_URL + '/efetivo.json', {
+    const putResp = UrlFetchApp.fetch(urlFB('/efetivo.json'), {
       method:      'put',
       contentType: 'application/json',
-      headers:     cabecalhoAuth(),
       payload:     JSON.stringify(militares),
       muteHttpExceptions: true
     });
@@ -157,13 +195,20 @@ function sincronizarComFirebase() {
     if (putResp.getResponseCode() === 200) {
       // Carimbo da sincronização REAL. O dashboard passa a exibir esta hora
       // em vez do relógio do próprio navegador, que mentia quando a sync parava.
-      UrlFetchApp.fetch(FIREBASE_URL + '/meta/ultimaSync.json', {
+      // A resposta E' conferida: gravar isto sem checar seria repetir a falha
+      // silenciosa que este script existe para eliminar.
+      const metaResp = UrlFetchApp.fetch(urlFB('/meta/ultimaSync.json'), {
         method:      'put',
         contentType: 'application/json',
-        headers:     cabecalhoAuth(),
         payload:     JSON.stringify(new Date().toISOString()),
         muteHttpExceptions: true
       });
+      if (metaResp.getResponseCode() !== 200) {
+        Logger.log('⚠️ Carimbo de sincronização recusado (' + metaResp.getResponseCode()
+          + '): ' + metaResp.getContentText().substring(0, 200));
+        Logger.log('   O efetivo foi enviado normalmente, mas o cabeçalho do dashboard');
+        Logger.log('   não vai mostrar a hora real até /meta ser liberado nas regras.');
+      }
       Logger.log('✅ Sincronização concluída: ' + militares.length + ' militares enviados ao Firebase.');
     } else {
       const erro = putResp.getResponseCode() + ' — ' + putResp.getContentText().substring(0, 300);
