@@ -427,6 +427,10 @@ body.view-mode .edit-only{display:none !important}
 .arma-pend{background:#1a2940;border:1px solid #f4433640;border-left:3px solid #f44336;border-radius:8px;padding:14px}
 .arma-pend h4{font-size:.75rem;color:#f44336;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
 .pend-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;max-height:300px;overflow-y:auto}
+.grad-section-cppd .grad-bar{border-left:3px solid var(--ok)}
+.grad-section-cppd-sem .grad-bar{border-left:3px solid var(--warn)}
+h3.cppd-title{color:#3DD68C}
+h3.cppd-sem-title{color:#F5A524}
 .pd-sec{margin-bottom:22px}
 .pd-sec h3{font-size:.78rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
 .pd-sec h3 .n{background:#1e3450;color:#fff;border-radius:10px;padding:1px 9px;font-size:.72rem}
@@ -592,6 +596,16 @@ body.view-mode .edit-only{display:none !important}
   <div id="secCCSV" class="grad-section grad-section-ccsv">
     <h3 class="ccsv-title">CCSV <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
     <div id="gradBarsCCSV"></div>
+  </div>
+
+  <div id="secComCPPD" class="grad-section grad-section-cppd">
+    <h3 class="cppd-title">Com CPPD <span style="font-size:.7rem;color:#667788;font-weight:400">— curso de especialização em praças desportivas</span></h3>
+    <div id="gradBarsComCPPD"></div>
+  </div>
+
+  <div id="secSemCPPD" class="grad-section grad-section-cppd-sem">
+    <h3 class="cppd-sem-title">Sem CPPD <span style="font-size:.7rem;color:#667788;font-weight:400">— ainda não cursaram ou sem registro</span></h3>
+    <div id="gradBarsSemCPPD"></div>
   </div>
 
   <div id="secAbono" class="grad-section grad-section-abono">
@@ -858,6 +872,40 @@ db.ref('.info/connected').on('value', snap => {
 });
 
 // ─── FUNÇÕES DE GRUPO ────────────────────────────────────────────────────────
+// CPPD e' o curso de especializacao da unidade (atuacao em pracas desportivas).
+// A coluna aceita formatos variados, entao qualquer conteudo que nao seja uma
+// negativa explicita conta como cursado. Em branco NAO e' negativa -- e'
+// ausencia de informacao, e por isso tem contagem propria.
+// A coluna e' um SIM/NAO. Normalizamos acento e o algarismo zero digitado no
+// lugar da letra O -- a planilha tem um "NÃ0" que, na regra anterior
+// ("preenchido e nao-negativo = cursado"), teria virado um CPPD que o militar
+// nao possui. Valor irreconhecivel NAO vira "sim" por omissao: vira pendencia.
+function normCPPD(v) {
+  return String(v || '').trim().toUpperCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // tira acento: NÃO -> NAO
+    .replace(/0/g, 'O')                                 // NÃ0 -> NAO
+    .replace(/[^A-Z]/g, '');
+}
+
+function temCPPD(m)     { return normCPPD(m.cppd) === 'SIM'; }
+function semCPPD(m)     { return normCPPD(m.cppd) === 'NAO'; }
+function cppdSemInfo(m) { const n = normCPPD(m.cppd); return n !== 'SIM' && n !== 'NAO'; }
+
+// Preenchido, mas nem SIM nem NAO -- erro de digitacao a corrigir na planilha.
+function cppdIlegivel(m) {
+  return String(m.cppd || '').trim() !== '' && cppdSemInfo(m);
+}
+
+// Valor que o normalizador conseguiu entender, mas so' depois de corrigir.
+// Interpretar em silencio deixaria o erro vivo na planilha; aqui ele aparece.
+const CPPD_ACEITOS = ['SIM', 'NÃO', 'NAO'];
+function cppdCorrigido(m) {
+  const bruto = String(m.cppd || '').trim().toUpperCase();
+  if (!bruto || CPPD_ACEITOS.indexOf(bruto) !== -1) return false;
+  const n = normCPPD(m.cppd);
+  return n === 'SIM' || n === 'NAO';   // entendido, mas grafado errado
+}
+
 // A planilha traz SIM / NAO / vazio -- e ocasionalmente texto na coluna errada.
 function equipOk(v)  { return String(v||'').trim().toUpperCase() === 'SIM'; }
 function equipNao(v) { const t = String(v||'').trim().toUpperCase(); return t === 'NÃO' || t === 'NAO'; }
@@ -988,7 +1036,7 @@ function loadData() {
       // Função/situação em branco na planilha NÃO podem derrubar o militar.
       arr = arr.filter(m => m && typeof m === 'object' && m.nome);
       // Garantir campos string para o restante do código não quebrar
-      arr = arr.map(m => ({ gh:'', rg:'', id:'', cia:'', funcao:'', sit:'', de:'', ate:'', arma:'', colete:'', ferias:'', abono:'', obs:'', ...m }));
+      arr = arr.map(m => ({ gh:'', rg:'', id:'', cia:'', funcao:'', sit:'', de:'', ate:'', arma:'', colete:'', ferias:'', abono:'', obs:'', cppd:'', ...m }));
       if (arr.length > 0) {
         const newJSON = JSON.stringify(arr);
         if (newJSON !== JSON.stringify(efetivo)) {
@@ -1100,13 +1148,21 @@ function calcMetrics() {
   const equipSemInfo  = aptosA.length - prontoRua - equipFalta;
   const prontoPct     = aptosA.length > 0 ? (prontoRua / aptosA.length * 100).toFixed(1) : '0.0';
 
+  // CPPD conta sobre o efetivo fora do tempo certo, mesma base do restante.
+  const semTC       = efetivo.filter(m => getCategoria(m) !== 'tempocerto');
+  const comCppd     = semTC.filter(temCPPD).length;
+  const semCppd     = semTC.filter(semCPPD).length;
+  const cppdSemInfo_= semTC.filter(cppdSemInfo).length;
+  const cppdPct     = semTC.length > 0 ? (comCppd / semTC.length * 100).toFixed(1) : '0.0';
+
   const patentes = {};
   efetivo.forEach(m => { if (getCategoria(m) !== 'tempocerto') patentes[m.gh] = (patentes[m.gh] || 0) + 1; });
   const setores = {};
   efetivo.forEach(m => { setores[m.cia] = (setores[m.cia] || 0) + 1; });
 
   return { t, aptoA, aptoATropa, aptoACCSV, aptoAOutros, aptoB, aptoC, lts, rr, reforma, fer, tc, abono, ofAtivos, pr, oper, patentes, setores,
-           prontoRua, equipFalta, equipSemInfo, prontoPct };
+           prontoRua, equipFalta, equipSemInfo, prontoPct,
+           comCppd, semCppd, cppdSemInfo: cppdSemInfo_, cppdPct };
 }
 
 // ─── CARDS ────────────────────────────────────────────────────────────────────
@@ -1116,6 +1172,7 @@ function calcMetrics() {
 const LIMIARES = {
   operacionalidade: { ok: 80, atencao: 65 },
   pronto:           { ok: 70, atencao: 50 },
+  cppd:             { ok: 60, atencao: 35 },
 };
 
 function estado(valor, limiar) {
@@ -1155,6 +1212,19 @@ function renderCards(m) {
       <div class="label">Pronto</div>
       <div class="sub">${m.prontoPct}% dos aptos · ${m.equipFalta} sem equip. · ${m.equipSemInfo} sem info</div>
       <div class="medidor"><i style="width:${Math.min(pronto,100)}%"></i></div>
+    </div>
+    <div class="card ${estado(parseFloat(m.cppdPct), LIMIARES.cppd)}" role="button" tabindex="0"
+         onclick="irPara('secComCPPD')" title="Militares com o curso CPPD — especialização em praças desportivas">
+      <div class="number">${m.comCppd}</div>
+      <div class="label">Com CPPD</div>
+      <div class="sub">${m.cppdPct}% do efetivo · curso de especialização</div>
+      <div class="medidor"><i style="width:${Math.min(parseFloat(m.cppdPct),100)}%"></i></div>
+    </div>
+    <div class="card" role="button" tabindex="0"
+         onclick="irPara('secSemCPPD')" title="Militares sem o curso CPPD registrado">
+      <div class="number">${m.semCppd + m.cppdSemInfo}</div>
+      <div class="label">Sem CPPD</div>
+      <div class="sub">${m.semCppd} sem o curso · ${m.cppdSemInfo} sem informação</div>
     </div>
   `;
 
@@ -1478,6 +1548,10 @@ function renderGradBars() {
   renderGrupoSection('gradBarsTropa',    'secTropa',    semTC.filter(isTropaGrupo),  'grad-tr');
   renderGrupoSection('gradBarsCiaOutros','secCiaOutros',semTC.filter(isCiaOutros),   'grad-co');
   renderGrupoSection('gradBarsCCSV',     'secCCSV',     semTC.filter(isCCSV),        'grad-ccsv');
+  renderGrupoSection('gradBarsComCPPD',  'secComCPPD',  semTC.filter(temCPPD),       'grad-cppd');
+  renderGrupoSection('gradBarsSemCPPD',  'secSemCPPD',  semTC.filter(m => !temCPPD(m)), 'grad-cppd-sem');
+  // (a secao "sem" reune quem marcou NAO e quem esta sem registro; o card
+  //  mostra a divisao entre os dois no subtitulo)
 
   // Abono (qualquer grupo/status exceto TC)
   renderGrupoSection('gradBarsAbono', 'secAbono',
@@ -2692,6 +2766,12 @@ function renderPendencias() {
       if (t && t !== 'SIM' && t !== 'NÃO' && t !== 'NAO')
         equipInvalido.push({ m, campo: campo.toUpperCase(), valor: m[campo] });
     });
+    // CPPD preenchido mas irreconhecivel
+    if (cppdIlegivel(m))
+      equipInvalido.push({ m, campo: 'CPPD', valor: m.cppd });
+    // CPPD entendido, porem grafado errado (ex.: "NÃ0" com zero no lugar do O)
+    if (cppdCorrigido(m))
+      equipInvalido.push({ m, campo: 'CPPD', valor: m.cppd, interpretado: normCPPD(m.cppd) });
   });
 
   const inconsistencias = quebrados.length + equipInvalido.length;
@@ -2699,8 +2779,10 @@ function renderPendencias() {
   html += (quebrados.map(({ m, campo, valor }) =>
     pdLinha(m, campo, 'crit', `Valor "${valor}" não é uma data válida — este militar fica de fora dos alertas automáticos até ser corrigido na planilha.`)
   ).join(''));
-  html += (equipInvalido.map(({ m, campo, valor }) =>
-    pdLinha(m, campo, 'crit', `A coluna ${campo} deveria conter apenas SIM ou NÃO, mas contém: "${valor}". Enquanto estiver assim, conta como equipamento não confirmado.`)
+  html += (equipInvalido.map(({ m, campo, valor, interpretado }) =>
+    interpretado
+      ? pdLinha(m, campo, 'aten', `Grafado como "${valor}" — o dashboard entendeu como ${interpretado} e está contando certo, mas vale corrigir na planilha para o próximo não passar batido.`)
+      : pdLinha(m, campo, 'crit', `A coluna ${campo} deveria conter apenas SIM ou NÃO, mas contém: "${valor}". Enquanto estiver assim, conta como não confirmado.`)
   ).join(''));
   if (inconsistencias === 0) html += '<div class="pd-vazio">Nenhuma inconsistência encontrada. 👍</div>';
   html += '</div>';

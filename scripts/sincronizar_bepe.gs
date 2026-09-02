@@ -103,6 +103,7 @@ function sincronizarComFirebase() {
       arma:   colAlt('ARMA', 'ARMA ACAUTELADA', 'ARMAMENTO'),
       colete: colAlt('COLETE', 'COLETE ACAUTELADO'),
       ferias: colAlt('FERIAS VENCIDAS', 'FERIAS'),
+      cppd:   colAlt('CPPD'),
     };
     Logger.log('Colunas detectadas: ' + JSON.stringify(C));
 
@@ -172,6 +173,7 @@ function sincronizarComFirebase() {
         arma:   pegaValor(r, C.arma,   ex.arma),
         colete: pegaValor(r, C.colete, ex.colete),
         ferias: pegaValor(r, C.ferias, ex.ferias),
+        cppd:   pegaValor(r, C.cppd,   ex.cppd),
         abono:  ex.abono || '',   // preservado do Firebase
         obs:    ex.obs   || '',   // preservado do Firebase
       });
