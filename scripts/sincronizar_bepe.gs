@@ -140,6 +140,7 @@ function sincronizarComFirebase() {
 
     const militares = [];
     const rgsVistos = new Set();
+    const descartadosComNome = [];
     let pulados     = 0;
 
     for (let i = 1; i < dados.length; i++) {
@@ -149,12 +150,27 @@ function sincronizarComFirebase() {
       const rg   = C.rg   >= 0 ? String(r[C.rg]).replace(/[.\-\s]/g, '').trim() : '';
 
       // ── FILTROS ──────────────────────────────────────────────
-      if (!gh)   { pulados++; continue; }  // linha vazia
+      // Descartar linha SEM nome e' rotina: sao subtotais e separadores.
+      // Descartar linha COM nome e' um militar sumindo do efetivo, e precisa
+      // ser denunciado. Foi assim que o 3 SGT ANDERSON ficou de fora por ter
+      // o mesmo RG do SUBTEN EVERSON -- o contador dizia "12 ignoradas" e
+      // ninguem sabia quais.
+      const linhaPlanilha = i + 1;
+      const denunciar = (motivo) => {
+        if (nome) descartadosComNome.push(
+          'linha ' + linhaPlanilha + ': ' + motivo
+          + ' | GH="' + gh + '" NOME="' + nome + '" RG="' + rg + '"');
+      };
+
+      if (!gh)   { denunciar('sem GH'); pulados++; continue; }  // linha vazia
       if (!nome) { pulados++; continue; }  // sem nome (subtotais)
-      if (!rg || rg.length < 3)    { pulados++; continue; }  // RG inválido/subtotal
+      if (!rg || rg.length < 3) { denunciar('RG vazio ou curto demais'); pulados++; continue; }
       if (nome.toUpperCase().startsWith('BOL')) { pulados++; continue; } // registro de boletim
       if (nome.toUpperCase() === 'CIVIL')        { pulados++; continue; }
-      if (rgsVistos.has(rg))       { pulados++; continue; }  // duplicado
+      if (rgsVistos.has(rg)) {
+        denunciar('RG DUPLICADO (ja usado por outro militar nesta planilha)');
+        pulados++; continue;
+      }
       // ─────────────────────────────────────────────────────────
 
       rgsVistos.add(rg);
@@ -180,6 +196,16 @@ function sincronizarComFirebase() {
     }
 
     Logger.log('Militares válidos: ' + militares.length + ' | Linhas ignoradas: ' + pulados);
+
+    if (descartadosComNome.length > 0) {
+      const aviso = [
+        descartadosComNome.length + ' linha(s) COM NOME foram descartadas.',
+        'Esses militares NAO aparecem no dashboard:',
+        ''
+      ].concat(descartadosComNome).join('\n');
+      Logger.log('⚠️ ' + aviso);
+      avisarFalha('Militar descartado da sincronizacao', aviso);
+    }
 
     if (militares.length === 0) {
       Logger.log('❌ Nenhum militar encontrado. Sincronização cancelada.');
