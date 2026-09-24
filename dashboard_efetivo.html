@@ -32,25 +32,29 @@
   const efetivoRef = db.ref('efetivo');
   const syncRef    = db.ref('meta/ultimaSync');
   const fotosRef = db.ref('fotos');
+  // Declarados aqui, e nao perto das ferramentas: o listener do efetivo grava o
+  // retrato diario, e o SDK pode disparar antes do fim do script principal.
+  const HISTORICO_REF = db.ref('historico');
+  const LOG_REF       = db.ref('logs');
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI Variable','Segoe UI',system-ui,-apple-system,sans-serif;background:var(--ground);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
 
-.header{background:linear-gradient(135deg,#1a2940,#0d1b2a);padding:16px 24px;border-bottom:3px solid #2196F3;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.header{background:linear-gradient(135deg,var(--raised),var(--ground));padding:16px 24px;border-bottom:3px solid #2196F3;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .header h1{font-size:1.3rem;color:#fff;letter-spacing:1.5px}
 .header h1 span{color:#2196F3}
-.header .meta{text-align:right;font-size:.8rem;color:#8899aa}
-.header .meta .date{color:#4FC3F7;font-weight:600}
+.header .meta{text-align:right;font-size:.8rem;color:var(--ink-dim)}
+.header .meta .date{color:var(--acc);font-weight:600}
 
-.toolbar{background:#1a2940;padding:10px 24px;display:flex;gap:10px;border-bottom:1px solid #1e3450;flex-wrap:wrap;align-items:center}
+.toolbar{background:var(--surface);padding:10px 24px;display:flex;gap:10px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
 .btn{padding:8px 16px;border:none;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
 .btn-primary{background:#2196F3;color:#fff}.btn-primary:hover{background:#1976D2}
 .btn-danger{background:#f44336;color:#fff}.btn-danger:hover{background:#d32f2f}
 .btn-success{background:#4CAF50;color:#fff}.btn-success:hover{background:#388E3C}
-.btn-outline{background:transparent;color:#4FC3F7;border:1px solid #4FC3F7}.btn-outline:hover{background:#4FC3F720}
+.btn-outline{background:transparent;color:var(--acc);border:1px solid var(--acc)}.btn-outline:hover{background:#4FC3F71F}
 .btn-excel{color:#4CAF50;border-color:#4CAF50}.btn-excel:hover{background:#4CAF5020}
-.toolbar .search{flex:1;min-width:200px;padding:8px 14px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.85rem}
+.toolbar .search{flex:1;min-width:200px;padding:8px 14px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:.85rem}
 .toolbar .search::placeholder{color:#556677}
 
 /* O respiro no rodape existe para o sino flutuante nao terminar por cima de
@@ -84,8 +88,7 @@ body{font-family:'Segoe UI Variable','Segoe UI',system-ui,-apple-system,sans-ser
 .card.est-ok::before{background:var(--ok)}
 .card.est-warn::before{background:var(--warn)}
 .card.est-crit::before{background:var(--crit)}
-.card .number{font-size:2.6rem;font-weight:700;line-height:1;color:var(--ink);
-  font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.card .number{font-size:2.6rem;font-weight:700;line-height:1;color:var(--ink);letter-spacing:-.5px}
 .card.est-ok .number{color:var(--ok)}
 .card.est-warn .number{color:var(--warn)}
 .card.est-crit .number{color:var(--crit)}
@@ -118,166 +121,137 @@ body{font-family:'Segoe UI Variable','Segoe UI',system-ui,-apple-system,sans-ser
   .card,.card:hover,.chip{transition:none;transform:none}
 }
 
-/* MOBILE CHARTS */
-.mobile-chart-alt{display:none}
-.mobile-setor-bars{display:none}
-.mobile-setor-section{display:none}
-@media(max-width:600px){
-  .mobile-chart-alt{display:block}
-  .mobile-setor-bars{display:block}
-  .mobile-setor-section{display:block}
-  .desktop-only{display:none !important}
-}
-.mob-row{display:flex;align-items:center;margin-bottom:6px;gap:8px}
-.mob-row .mob-label{font-size:.72rem;color:#bcc;min-width:65px;text-align:right;white-space:nowrap}
-.mob-row .mob-bar-bg{flex:1;height:16px;background:#0d1b2a;border-radius:4px;overflow:hidden}
-.mob-row .mob-bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-size:.6rem;font-weight:700;color:#fff;min-width:0;transition:width .3s}
-.mob-row .mob-val{font-size:.75rem;font-weight:700;min-width:24px;text-align:left}
-.mob-cat-bar{margin-bottom:8px}
-.mob-cat-bar .mob-cat-head{display:flex;align-items:center;gap:6px;margin-bottom:3px}
-.mob-cat-bar .mob-cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.mob-cat-bar .mob-cat-name{font-size:.78rem;font-weight:600;color:#e0e0e0}
-.mob-cat-bar .mob-cat-num{font-size:.78rem;font-weight:700;margin-left:auto}
-.mob-cat-bar .mob-cat-track{width:100%;height:12px;background:#0d1b2a;border-radius:4px;overflow:hidden}
-.mob-cat-bar .mob-cat-fill{height:100%;border-radius:4px;transition:width .3s}
-.setor-bar-item{margin-bottom:14px}
-.setor-bar-item .setor-label{font-size:.8rem;font-weight:700;color:#e0e0e0;margin-bottom:4px;display:flex;justify-content:space-between}
-.setor-bar-item .setor-label span{font-weight:400;color:#8899aa;font-size:.75rem}
-.setor-bar-track{width:100%;height:22px;background:#0d1b2a;border-radius:6px;overflow:hidden;display:flex}
-.setor-bar-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;min-width:0}
-.setor-bar-legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
-.setor-bar-legend-item{display:flex;align-items:center;gap:3px;font-size:.65rem;color:#bbb}
-.setor-bar-legend-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+/* GRÁFICOS — barras em HTML, as mesmas no desktop e no celular */
+.viz-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.viz-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.viz-largo{grid-column:1/-1}
+.viz-card > h3{font-size:.68rem;color:var(--ink-dim);text-transform:uppercase;letter-spacing:1.6px;font-weight:700;margin:0 0 14px}
+.viz-card > h3 small{display:block;text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink-faint);font-size:.72rem;margin-top:3px}
+.viz-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px 32px}
+.viz-col h4{font-size:.64rem;color:var(--ink-faint);text-transform:uppercase;letter-spacing:1.4px;margin:0 0 4px;font-weight:700}
+.viz-col h4 small{color:var(--ink-dim);font-size:.66rem;margin-left:4px;letter-spacing:0}
 
-/* CHARTS */
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.chart-box{background:#1a2940;border-radius:10px;padding:16px}
-.chart-box h3{font-size:.85rem;color:#4FC3F7;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
-.chart-wrap{position:relative;width:100%;max-height:320px}
+/* Barra horizontal: rótulo · trilho · valor. Colunas de largura fixa para que
+   os trilhos de todas as linhas comecem e terminem no mesmo lugar. */
+.hbar{--rot:140px;--val:86px;display:grid;grid-template-columns:var(--rot) 1fr var(--val);align-items:center;
+  gap:10px;padding:5px 6px;margin:0 -6px;border-radius:6px}
+.viz-cols .hbar{--rot:64px;--val:34px}
+.hbar.clicavel{cursor:pointer}
+.hbar.clicavel:hover{background:var(--raised)}
+.hbar:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.hbar-rot{font-size:.76rem;color:var(--ink-dim);line-height:1.2}
+.hbar-trilho{height:10px;display:block}
+.hbar-trilho i{display:block;height:100%;border-radius:0 4px 4px 0}
+.hbar-val{font-size:.82rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.hbar-val small{font-weight:400;color:var(--ink-faint);font-size:.68rem;margin-left:6px}
 
-/* GRAD BARS */
-.grad-section{margin-bottom:20px}
-.grad-section h3{font-size:.85rem;color:#4FC3F7;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
-.grad-bar{background:#1a2940;border-radius:8px;margin-bottom:6px;overflow:hidden;transition:all .3s}
-.grad-bar-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;transition:background .2s}
-.grad-bar-header:hover{background:#1e3450}
-.grad-bar-header.active{background:#1e3450;border-left:4px solid #2196F3}
+/* Barra empilhada por setor: 2px de fundo entre os segmentos no lugar de borda */
+.sbar{margin-bottom:14px}
+.sbar-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.sbar-nome{font-size:.8rem;font-weight:700;color:var(--ink)}
+.sbar-tot{font-size:.8rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sbar-tot small{font-weight:400;color:var(--ink-faint);font-size:.7rem}
+.sbar-trilho{display:flex;gap:2px;height:22px}
+.sbar-trilho i{display:flex;align-items:center;justify-content:center;min-width:3px;font-style:normal;
+  font-size:.66rem;font-weight:700;color:var(--ground);font-variant-numeric:tabular-nums;cursor:default}
+.sbar-trilho i:first-child{border-radius:4px 0 0 4px}
+.sbar-trilho i:last-child{border-radius:0 4px 4px 0}
+.sbar-trilho i:only-child{border-radius:4px}
+.viz-leg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px;font-size:.7rem;color:var(--ink-dim)}
+.viz-leg span{display:inline-flex;align-items:center;gap:6px}
+.viz-leg i{width:10px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0}
+.viz-leg small{color:var(--ink-faint)}
+.viz-nota{font-size:.72rem;color:var(--ink-faint);margin:8px 0 0 -6px;padding:4px 6px;border-radius:6px;display:inline-block}
+.viz-nota.clicavel{cursor:pointer}
+.viz-nota.clicavel:hover{background:var(--raised);color:var(--ink-dim)}
+.viz-nota:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+
+/* Estado -> cor (mesma regra dos cards). Neutro e' cinza de proposito: ferias
+   nao e' bom nem ruim. Pares vizinhos validados para daltonismo (ΔE >= 10). */
+.f-ok{background:var(--ok)}.f-warn{background:var(--warn)}.f-crit{background:var(--crit)}
+.f-neutro{background:var(--ink-dim)}.f-acc{background:var(--acc)}
+
+/* SEÇÕES E BARRAS DE GRADUAÇÃO */
+/* Cada secao tem UMA cor, e ela diz o estado de quem esta ali (a mesma regra
+   dos cards): --sec vem do modificador. Antes eram 13 degradês decorativos --
+   o laranja de "Oficiais" era o mesmo de "Apto cat B". */
+.grad-section{--sec:var(--acc);margin-bottom:18px}
+.sec-ok{--sec:var(--ok)}
+.sec-warn{--sec:var(--warn)}
+.sec-crit{--sec:var(--crit)}
+.sec-neutro{--sec:var(--ink-dim)}
+.sec-fora{--sec:var(--ink-faint)}
+.grad-section h3{font-size:.8rem;color:var(--ink);margin-bottom:12px;text-transform:uppercase;letter-spacing:1.2px}
+.grad-section h3 .sec-sub{font-size:.7rem;color:var(--ink-faint);font-weight:400;text-transform:none;letter-spacing:0}
+.grad-bar{background:var(--surface);border:1px solid var(--line);border-radius:8px;margin-bottom:6px;overflow:hidden}
+.grad-bar-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none;transition:background .2s;border-left:3px solid transparent}
+.grad-bar-header:hover{background:var(--raised)}
+.grad-bar-header:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.grad-bar-header.active{background:var(--raised);border-left-color:var(--sec)}
 .grad-bar-left{display:flex;align-items:center;gap:12px}
-.grad-bar-icon{font-size:1.1rem;color:#4FC3F7;transition:transform .3s;width:20px;text-align:center}
-.grad-bar-header.active .grad-bar-icon{transform:rotate(90deg)}
-.grad-bar-rank{font-weight:700;font-size:.9rem;color:#e0e0e0;min-width:120px}
-.grad-bar-count{background:#2196F320;color:#2196F3;padding:3px 12px;border-radius:12px;font-size:.78rem;font-weight:700}
-.grad-bar-meter{flex:1;height:8px;background:#0d1b2a;border-radius:4px;margin:0 16px;overflow:hidden;min-width:80px}
-.grad-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.grad-bar-icon{font-size:.8rem;color:var(--ink-faint);transition:transform .3s;width:16px;text-align:center}
+.grad-bar-header.active .grad-bar-icon{transform:rotate(90deg);color:var(--ink-dim)}
+.grad-bar-rank{font-weight:700;font-size:.84rem;color:var(--ink);min-width:120px}
+.grad-bar-count{background:var(--raised);color:var(--ink);padding:3px 12px;border-radius:12px;font-size:.76rem;font-weight:700;font-variant-numeric:tabular-nums;min-width:40px;text-align:center}
+/* Medidor proporcional ao maior grupo da secao -- antes era sempre 100% */
+.grad-bar-meter{flex:1;height:6px;margin:0 16px;min-width:80px;display:flex}
+.grad-bar-fill{height:100%;border-radius:0 3px 3px 0;background:var(--sec);transition:width .6s ease}
 .grad-bar-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
 .grad-bar-body.open{max-height:3000px}
-.grad-bar-list{padding:4px 16px 12px 48px}
+.grad-bar-list{padding:4px 16px 12px 44px}
 .grad-bar-list table{width:100%;border-collapse:collapse;font-size:.76rem}
-.grad-bar-list th{color:#4FC3F7;text-align:left;padding:6px 8px;font-weight:600;border-bottom:1px solid #1e3450}
-.grad-bar-list td{padding:5px 8px;border-bottom:1px solid #0d1b2a;vertical-align:middle}
-.grad-bar-list tr:hover{background:#1e345040}
+.grad-bar-list th{color:var(--ink-dim);background:transparent;text-align:left;padding:6px 8px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--line);position:static}
+.grad-bar-list td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink)}
+.grad-bar-list tr:last-child td{border-bottom:none}
+.grad-bar-list tbody tr:hover{background:var(--raised)}
 .grad-bar-list .btn{padding:2px 8px;font-size:.68rem}
-.grad-bar-list .cb{width:14px;height:14px;cursor:pointer;accent-color:#2196F3}
-.grad-bar-total{display:flex;align-items:center;gap:8px;padding:8px 16px 4px 48px;font-size:.75rem;color:#667788}
-.grad-bar-total span{color:#4FC3F7;font-weight:600}
+.grad-bar-list .num{color:var(--ink-faint);font-variant-numeric:tabular-nums}
 
-/* Grad bar color themes */
-.grad-of .grad-bar-fill{background:linear-gradient(90deg,#FF9800,#FF5722)}
-.grad-of .grad-bar-header.active{border-color:#FF9800}
-.grad-pr .grad-bar-fill{background:linear-gradient(90deg,#2196F3,#1565C0)}
-.grad-tr .grad-bar-fill{background:linear-gradient(90deg,#2196F3,#1565C0)}
-.grad-tr .grad-bar-count{background:#2196F320;color:#2196F3}
-.grad-tr .grad-bar-header.active{border-color:#2196F3}
-.grad-co .grad-bar-fill{background:linear-gradient(90deg,#78909C,#546E7A)}
-.grad-co .grad-bar-count{background:#78909C20;color:#78909C}
-.grad-co .grad-bar-header.active{border-color:#78909C}
-.grad-ccsv .grad-bar-fill{background:linear-gradient(90deg,#26C6DA,#0097A7)}
-.grad-ccsv .grad-bar-count{background:#26C6DA20;color:#26C6DA}
-.grad-ccsv .grad-bar-header.active{border-color:#26C6DA}
-.grad-abono .grad-bar-fill{background:linear-gradient(90deg,#FFC107,#FF8F00)}
-.grad-abono .grad-bar-count{background:#FFC10720;color:#FFC107}
-.grad-abono .grad-bar-header.active{border-color:#FFC107}
-.grad-fe .grad-bar-fill{background:linear-gradient(90deg,#00BCD4,#0097A7)}
-.grad-fe .grad-bar-count{background:#00BCD420;color:#00BCD4}
-.grad-aptob .grad-bar-fill{background:linear-gradient(90deg,#FF9800,#F57C00)}
-.grad-aptob .grad-bar-count{background:#FF980020;color:#FF9800}
-.grad-aptoc .grad-bar-fill{background:linear-gradient(90deg,#FF5722,#E64A19)}
-.grad-aptoc .grad-bar-count{background:#FF572220;color:#FF5722}
-.grad-lts .grad-bar-fill{background:linear-gradient(90deg,#f44336,#c62828)}
-.grad-lts .grad-bar-count{background:#f4433620;color:#f44336}
-.grad-agrr .grad-bar-fill{background:linear-gradient(90deg,#AB47BC,#7B1FA2)}
-.grad-agrr .grad-bar-count{background:#AB47BC20;color:#AB47BC}
-.grad-reforma .grad-bar-fill{background:linear-gradient(90deg,#A1887F,#795548)}
-.grad-reforma .grad-bar-count{background:#79554820;color:#A1887F}
-.grad-tc .grad-bar-fill{background:linear-gradient(90deg,#8D6E63,#6D4C41)}
-.grad-tc .grad-bar-count{background:#8D6E6320;color:#8D6E63}
+/* Separador entre secoes */
+.grad-section + .grad-section{border-top:1px solid var(--line);padding-top:16px}
 
-/* Section border separators */
-.grad-section-tropa{border-top:2px solid #2196F340;padding-top:12px}
-.tropa-title{color:#2196F3 !important}
-.grad-section-ciaoutros{border-top:2px solid #78909C40;padding-top:12px}
-.ciaoutros-title{color:#78909C !important}
-.grad-section-ccsv{border-top:2px solid #26C6DA40;padding-top:12px}
-.ccsv-title{color:#26C6DA !important}
-.grad-section-abono{border-top:2px solid #FFC10740;padding-top:12px}
-.abono-title{color:#FFC107 !important}
-.grad-section-ferias{border-top:2px solid #00BCD440;padding-top:12px}
-.ferias-title{color:#00BCD4 !important}
-.grad-section-aptob{border-top:2px solid #FF980040;padding-top:12px}
-.aptob-title{color:#FF9800 !important}
-.grad-section-aptoc{border-top:2px solid #FF572240;padding-top:12px}
-.aptoc-title{color:#FF5722 !important}
-.grad-section-lts{border-top:2px solid #f4433640;padding-top:12px}
-.lts-title{color:#f44336 !important}
-.grad-section-agrr{border-top:2px solid #7B1FA240;padding-top:12px}
-.agrr-title{color:#AB47BC !important}
-.grad-section-reforma{border-top:2px solid #79554840;padding-top:12px}
-.reforma-title{color:#A1887F !important}
-.grad-section-tc{border-top:2px solid #8D6E6340;padding-top:12px}
-.tc-title{color:#8D6E63 !important}
-
-/* Sub-section dividers (CIA vs CCSV within status sections) */
-.subsec-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;padding:5px 14px;margin:10px 0 4px;border-left:4px solid;border-radius:0 4px 4px 0;background:#0d1b2a50;display:inline-block}
+/* Sub-divisao CIA x CCSV dentro das secoes de estado */
+.subsec-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;padding:4px 12px;margin:10px 0 6px;border-left:3px solid var(--sec);color:var(--ink-dim);display:inline-block}
 
 /* TABLE */
 table{width:100%;border-collapse:collapse;font-size:.78rem}
-thead th{background:#0d1b2a;color:#4FC3F7;padding:8px 10px;text-align:left;font-weight:600;position:sticky;top:0}
-tbody td{padding:6px 10px;border-bottom:1px solid #1e3450}
-tbody tr:hover{background:#1e3450}
+thead th{background:var(--ground);color:var(--ink-dim);padding:8px 10px;text-align:left;font-weight:600;position:sticky;top:0}
+tbody td{padding:6px 10px;border-bottom:1px solid var(--line)}
+tbody tr:hover{background:var(--raised)}
 
 /* FOTO */
-.foto-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid #2a3d55;background:#0d1b2a;flex-shrink:0;display:block}
-.foto-preview-modal{width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #2196F3;flex-shrink:0;background:#0d1b2a;display:block}
+.foto-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid #2a3d55;background:var(--ground);flex-shrink:0;display:block}
+.foto-preview-modal{width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #2196F3;flex-shrink:0;background:var(--ground);display:block}
 .foto-upload-wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .foto-upload-btns{display:flex;flex-direction:column;gap:8px}
-.foto-upload-btns small{color:#667788;font-size:.7rem}
+.foto-upload-btns small{color:var(--ink-faint);font-size:.7rem}
 
-/* TAGS */
+/* TAGS — cor pelo estado, com fundo translucido da mesma cor */
 .tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.68rem;font-weight:600}
-.tag-green{background:#4CAF5020;color:#4CAF50}
-.tag-yellow{background:#FF980020;color:#FF9800}
-.tag-red{background:#f4433620;color:#f44336}
-.tag-blue{background:#2196F320;color:#2196F3}
-.tag-purple{background:#9C27B020;color:#9C27B0}
-.tag-abono{background:#FFC10720;color:#FFC107;font-size:.6rem;padding:1px 5px;border-radius:3px;vertical-align:middle;margin-left:4px}
+.tag-green{background:#3DD68C1F;color:var(--ok)}
+.tag-yellow{background:#F5A5241F;color:var(--warn)}
+.tag-red{background:#F4564B1F;color:var(--crit)}
+.tag-blue{background:#4FC3F71F;color:var(--acc)}
+.tag-neutro{background:var(--raised);color:var(--ink-dim)}
+.tag-abono{background:var(--raised);color:var(--ink-dim);font-size:.6rem;padding:1px 5px;border-radius:3px;vertical-align:middle;margin-left:6px;letter-spacing:.4px}
 
 .cb{width:16px;height:16px;cursor:pointer;accent-color:#2196F3}
 
 /* MODAL */
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:1000;justify-content:center;align-items:center}
 .modal-overlay.active{display:flex}
-.modal{background:#1a2940;border-radius:12px;padding:24px;width:90%;max-width:700px;max-height:90vh;overflow-y:auto;border:1px solid #2196F3}
-.modal h2{color:#4FC3F7;font-size:1.1rem;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
-.modal h2 .close{background:none;border:none;color:#8899aa;font-size:1.5rem;cursor:pointer}
+.modal{background:var(--surface);border-radius:12px;padding:24px;width:90%;max-width:700px;max-height:90vh;overflow-y:auto;border:1px solid #2196F3}
+.modal h2{color:var(--acc);font-size:1.1rem;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.modal h2 .close{background:none;border:none;color:var(--ink-dim);font-size:1.5rem;cursor:pointer}
 .modal h2 .close:hover{color:#fff}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-group{display:flex;flex-direction:column;gap:4px}
 .form-group.full{grid-column:1/-1}
-.form-group label{font-size:.75rem;color:#8899aa;text-transform:uppercase;letter-spacing:.5px}
-.form-group input,.form-group select,.form-group textarea{padding:8px 12px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.85rem;font-family:inherit}
+.form-group label{font-size:.75rem;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select,.form-group textarea{padding:8px 12px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:.85rem;font-family:inherit}
 .form-group input:focus,.form-group select:focus{outline:none;border-color:#2196F3}
 .form-group select{cursor:pointer}
-.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid #1e3450}
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 
 /* TOAST */
 .toast{position:fixed;bottom:20px;right:20px;padding:12px 20px;border-radius:8px;color:#fff;font-size:.85rem;font-weight:600;z-index:2000;transform:translateY(100px);opacity:0;transition:all .3s}
@@ -293,7 +267,7 @@ tbody tr:hover{background:#1e3450}
 body.view-mode .edit-only{display:none !important}
 
 @media(max-width:900px){
-  .charts{grid-template-columns:1fr}
+  .viz-grid{grid-template-columns:1fr}
   .cards{grid-template-columns:repeat(2,1fr)}
   .form-grid{grid-template-columns:1fr}
 }
@@ -311,8 +285,9 @@ body.view-mode .edit-only{display:none !important}
   .cards{grid-template-columns:1fr}
   .card .number{font-size:1.8rem}
   .card .label{font-size:.7rem}
-  .chart-box{padding:10px}
-  .chart-box h3{font-size:.75rem}
+  .viz-card{padding:14px}
+  .viz-cols{grid-template-columns:1fr}
+  .hbar{--rot:108px;--val:78px}
   .grad-section h3{font-size:.75rem}
   .grad-bar-header{padding:10px 12px}
   .grad-bar-rank{font-size:.8rem;min-width:80px}
@@ -333,38 +308,38 @@ body.view-mode .edit-only{display:none !important}
    cobrindo o "BE" de "BEPE". Canto inferior direito nao disputa espaco com
    nada, e o sino continua arrastavel para onde o usuario preferir. */
 .alerta-bell{position:fixed;bottom:20px;right:20px;z-index:90;cursor:pointer;background:var(--raised);border:1px solid var(--line);border-radius:50%;width:46px;height:46px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 4px 14px rgba(0,0,0,.45);transition:border-color .2s,box-shadow .2s}
-.alerta-bell:hover{border-color:#f44336;box-shadow:0 0 12px #f4433640}
-.alerta-bell .alerta-badge{position:absolute;top:-4px;right:-4px;background:#f44336;color:#fff;font-size:.62rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;animation:pulse-bell 2s infinite}
-@keyframes pulse-bell{0%,100%{box-shadow:0 0 0 0 #f4433660}50%{box-shadow:0 0 0 6px #f4433600}}
+.alerta-bell:hover{border-color:var(--crit);box-shadow:0 0 12px #F4564B40}
+.alerta-bell .alerta-badge{position:absolute;top:-4px;right:-4px;background:var(--crit);color:#fff;font-size:.62rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;animation:pulse-bell 2s infinite}
+@keyframes pulse-bell{0%,100%{box-shadow:0 0 0 0 #F4564B60}50%{box-shadow:0 0 0 6px #F4564B00}}
 .alerta-bell.empty{opacity:.4}
 .alerta-bell.empty .alerta-badge{display:none}
 
-.alerta-panel{position:fixed;bottom:76px;right:20px;width:380px;max-width:calc(100vw - 40px);max-height:70vh;background:#1a2940;border:1px solid #f4433640;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.6);z-index:95;display:none;flex-direction:column;overflow:hidden}
+.alerta-panel{position:fixed;bottom:76px;right:20px;width:380px;max-width:calc(100vw - 40px);max-height:70vh;background:var(--surface);border:1px solid #F4564B40;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.6);z-index:95;display:none;flex-direction:column;overflow:hidden}
 .alerta-panel.show{display:flex}
-.alerta-panel-head{padding:14px 18px;background:linear-gradient(135deg,#f4433620,#1a2940);border-bottom:1px solid #f4433630;display:flex;align-items:center;gap:10px}
-.alerta-panel-head h3{font-size:.85rem;color:#f44336;font-weight:700;letter-spacing:.5px;flex:1}
-.alerta-panel-head .close-x{background:none;border:none;color:#8899aa;font-size:1.3rem;cursor:pointer;line-height:1}
+.alerta-panel-head{padding:14px 18px;background:linear-gradient(135deg,#F4564B1F,var(--surface));border-bottom:1px solid #F4564B30;display:flex;align-items:center;gap:10px}
+.alerta-panel-head h3{font-size:.85rem;color:var(--crit);font-weight:700;letter-spacing:.5px;flex:1}
+.alerta-panel-head .close-x{background:none;border:none;color:var(--ink-dim);font-size:1.3rem;cursor:pointer;line-height:1}
 .alerta-panel-head .close-x:hover{color:#fff}
 .alerta-panel-body{overflow-y:auto;padding:8px}
 .alerta-panel-body::-webkit-scrollbar{width:6px}
-.alerta-panel-body::-webkit-scrollbar-thumb{background:#1e3450;border-radius:3px}
-.alerta-empty{padding:30px 20px;text-align:center;color:#8899aa;font-size:.85rem}
+.alerta-panel-body::-webkit-scrollbar-thumb{background:var(--raised);border-radius:3px}
+.alerta-empty{padding:30px 20px;text-align:center;color:var(--ink-dim);font-size:.85rem}
 .alerta-empty .emoji{font-size:2rem;display:block;margin-bottom:8px}
 
 .alerta-group{margin-bottom:8px}
 .alerta-group-title{font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;padding:6px 10px;border-radius:4px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
-.alerta-group-title.critico{background:#f4433620;color:#f44336}
-.alerta-group-title.aviso{background:#FF980020;color:#FF9800}
-.alerta-group-title.info{background:#2196F320;color:#2196F3}
-.alerta-mil{background:#0d1b2a;border-radius:6px;padding:10px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;cursor:pointer;border-left:3px solid transparent;transition:all .2s}
-.alerta-mil:hover{border-left-color:#2196F3;background:#1e3450}
+.alerta-group-title.critico{background:#F4564B20;color:var(--crit)}
+.alerta-group-title.aviso{background:#F5A52420;color:var(--warn)}
+.alerta-group-title.info{background:#4FC3F720;color:var(--acc)}
+.alerta-mil{background:var(--ground);border-radius:6px;padding:10px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;cursor:pointer;border-left:3px solid transparent;transition:all .2s}
+.alerta-mil:hover{border-left-color:var(--acc);background:var(--raised)}
 .alerta-mil .mil-info{flex:1;min-width:0}
-.alerta-mil .mil-nome{font-size:.78rem;font-weight:600;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.alerta-mil .mil-meta{font-size:.65rem;color:#667788;margin-top:2px}
+.alerta-mil .mil-nome{font-size:.78rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alerta-mil .mil-meta{font-size:.65rem;color:var(--ink-faint);margin-top:2px}
 .alerta-mil .mil-dias{font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:4px;white-space:nowrap}
-.mil-dias.critico{background:#f4433620;color:#f44336}
-.mil-dias.aviso{background:#FF980020;color:#FF9800}
-.mil-dias.info{background:#2196F320;color:#2196F3}
+.mil-dias.critico{background:#F4564B20;color:var(--crit)}
+.mil-dias.aviso{background:#F5A52420;color:var(--warn)}
+.mil-dias.info{background:#4FC3F720;color:var(--acc)}
 
 @media(max-width:600px){
   .alerta-bell{bottom:16px;right:16px;left:auto;top:auto;transform:none;width:48px;height:48px;font-size:1.4rem;box-shadow:0 4px 16px rgba(0,0,0,.5)}
@@ -372,104 +347,129 @@ body.view-mode .edit-only{display:none !important}
 }
 
 /* ─── SEÇÕES COLAPSÁVEIS ─── */
-.grad-section h3{cursor:pointer;user-select:none;padding:10px 14px;background:#1a2940;border-radius:8px;border:1px solid #1e3450;transition:all .2s;margin-bottom:8px}
-.grad-section h3:hover{background:#1e3450;border-color:#2196F3}
+.grad-section h3{cursor:pointer;user-select:none;padding:10px 14px;background:var(--surface);border-radius:8px;border:1px solid var(--line);border-left:3px solid var(--sec);transition:background .2s,border-color .2s;margin-bottom:8px}
+.grad-section h3:hover{background:var(--raised)}
+.grad-section h3:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .grad-section h3.sec-collapsed{margin-bottom:0}
-.grad-section h3 .sec-chevron{display:inline-block;transition:transform .3s;font-size:.65rem;color:#4FC3F7;margin-right:6px}
+.grad-section h3 .sec-chevron{display:inline-block;transition:transform .3s;font-size:.65rem;color:var(--ink-faint);margin-right:6px}
 .grad-section h3.sec-collapsed .sec-chevron{transform:rotate(-90deg)}
-.grad-section h3 .sec-pill{margin-left:auto;background:#2196F320;color:#2196F3;padding:2px 10px;border-radius:10px;font-size:.7rem;font-weight:700;letter-spacing:.5px}
+.grad-section h3 .sec-pill{margin-left:auto;background:var(--raised);color:var(--ink);padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700;letter-spacing:.5px;font-variant-numeric:tabular-nums}
 .grad-section h3{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.grad-section h3 > span:not(.sec-chevron):not(.sec-pill){flex:1;display:inline-flex;align-items:center;gap:6px}
+.grad-section h3 > span:not(.sec-chevron):not(.sec-pill){flex:1;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
 .grad-section-content{max-height:30000px;overflow:hidden;transition:max-height .4s ease,opacity .25s ease;opacity:1}
 .grad-section-content.collapsed{max-height:0;opacity:0}
 
 /* ─── MODAL TOOLS (Tendência/Armamento/Log/Boletim) ─── */
 .tool-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:1100;justify-content:center;align-items:center;padding:20px}
 .tool-overlay.active{display:flex}
-.tool-modal{background:#0f1923;border:1px solid #1e3450;border-radius:12px;width:100%;max-width:980px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
-.tool-head{padding:16px 22px;background:linear-gradient(135deg,#1a2940,#0d1b2a);border-bottom:1px solid #1e3450;display:flex;align-items:center;gap:12px}
+.tool-modal{background:var(--ground);border:1px solid var(--line);border-radius:12px;width:100%;max-width:980px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.tool-head{padding:16px 22px;background:linear-gradient(135deg,var(--raised),var(--ground));border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
 .tool-head h2{font-size:1rem;color:#fff;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;flex:1;display:flex;align-items:center;gap:10px}
-.tool-head h2::before{content:'';width:3px;height:18px;background:#4FC3F7;border-radius:2px}
+.tool-head h2::before{content:'';width:3px;height:18px;background:var(--acc);border-radius:2px}
 .tool-head .actions{display:flex;gap:8px}
-.tool-head .close-x{background:#1e3450;border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+.tool-head .close-x{background:var(--raised);border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
 .tool-head .close-x:hover{background:#f44336}
 .tool-body{flex:1;overflow-y:auto;padding:20px}
 .tool-body::-webkit-scrollbar{width:8px}
-.tool-body::-webkit-scrollbar-thumb{background:#1e3450;border-radius:4px}
+.tool-body::-webkit-scrollbar-thumb{background:var(--raised);border-radius:4px}
 
 /* TENDÊNCIA */
-.tend-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}
-.tend-stat{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:14px;border-top:2px solid var(--tc,#2196F3)}
-.tend-stat .tv{font-size:1.7rem;font-weight:800;color:var(--tc,#2196F3)}
-.tend-stat .tl{font-size:.62rem;color:#8899aa;text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.tend-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.tend-stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 14px 12px;position:relative;overflow:hidden}
+.tend-stat::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:var(--line)}
+.tend-stat.est-ok::before{background:var(--ok)}
+.tend-stat.est-warn::before{background:var(--warn)}
+.tend-stat.est-crit::before{background:var(--crit)}
+.tend-stat .tv{font-size:1.7rem;font-weight:700;color:var(--ink);line-height:1.1}
+.tend-stat.est-ok .tv{color:var(--ok)}
+.tend-stat.est-warn .tv{color:var(--warn)}
+.tend-stat.est-crit .tv{color:var(--crit)}
+.tend-stat .tl{font-size:.62rem;color:var(--ink-dim);text-transform:uppercase;letter-spacing:1.2px;margin-top:6px;font-weight:600}
 .tend-stat .td{font-size:.7rem;margin-top:4px}
-.tend-up{color:#4CAF50}.tend-down{color:#f44336}.tend-eq{color:#8899aa}
-.tend-chart-box{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:16px;margin-bottom:14px}
-.tend-empty{text-align:center;padding:30px;color:#8899aa;font-size:.85rem;background:#1a2940;border-radius:8px;border:1px dashed #1e3450}
+/* tend-up = variacao boa, tend-down = variacao ruim (nao "subiu"/"desceu") */
+.tend-up{color:var(--ok)}.tend-down{color:var(--crit)}.tend-eq{color:var(--ink-dim)}
+.tend-vs{color:var(--ink-faint);font-weight:400}
+.tend-chart-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.tend-h{font-size:.72rem;color:var(--ink-dim);text-transform:uppercase;letter-spacing:1.4px;margin:0 0 12px;font-weight:700}
+.tend-h small{display:block;text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink-faint);font-size:.7rem;margin-top:3px}
+.tend-canvas{position:relative}
+.tend-tab{width:100%;border-collapse:collapse;font-size:.76rem}
+.tend-tab th{background:var(--ground);color:var(--ink-dim);text-align:left;padding:8px 10px;font-weight:600;font-size:.64rem;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--line);position:static}
+.tend-tab td{padding:7px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.tend-tab tbody tr:hover{background:var(--raised)}
+.tend-status{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.64rem;font-weight:700;border:1px solid currentColor;white-space:nowrap}
+.tend-status.pos{color:var(--ok)}.tend-status.neg{color:var(--crit)}.tend-status.eq{color:var(--ink-dim)}
+.tend-empty{text-align:center;padding:30px;color:var(--ink-dim);font-size:.85rem;background:var(--surface);border-radius:10px;border:1px dashed var(--line)}
 .tend-empty .ico{font-size:2.2rem;margin-bottom:10px;display:block}
 
 /* ARMAMENTO */
 .arma-top{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
-.arma-c{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:14px;text-align:center;border-top:2px solid var(--ac,#2196F3)}
-.arma-c .av{font-size:2rem;font-weight:800;color:var(--ac,#2196F3)}
-.arma-c .al{font-size:.62rem;color:#8899aa;text-transform:uppercase;letter-spacing:1px;margin-top:3px}
-.arma-c .ap{font-size:.68rem;color:#667788;margin-top:2px}
-.ac-ok{--ac:#4CAF50}.ac-pend{--ac:#FF9800}.ac-cok{--ac:#26C6DA}.ac-cpend{--ac:#f44336}
+.arma-c{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center}
+.arma-c .av{font-size:2rem;font-weight:700;color:var(--ink);line-height:1.1}
+.arma-c .al{font-size:.62rem;color:var(--ink-dim);text-transform:uppercase;letter-spacing:1.2px;margin-top:6px;font-weight:600}
+.arma-c .ap{font-size:.68rem;color:var(--ink-faint);margin-top:3px}
 .arma-setores{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.arma-bloco{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:14px}
-.arma-bloco h4{font-size:.7rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px}
+.arma-bloco{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.arma-bloco h4{font-size:.68rem;color:var(--ink-dim);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px}
 .arma-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.arma-row .arl{font-size:.72rem;color:#bbb;min-width:60px}
-.arma-row .art{flex:1;height:16px;background:#0d1b2a;border-radius:3px;overflow:hidden;display:flex}
-.arma-row .ars-ok{background:linear-gradient(90deg,#4CAF50,#2e7d32);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;color:#fff}
-.arma-row .ars-no{background:linear-gradient(90deg,#f44336,#c62828);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;color:#fff}
-.arma-row .arv{font-size:.68rem;color:#bbb;min-width:50px;text-align:right}
-.arma-pend{background:#1a2940;border:1px solid #f4433640;border-left:3px solid #f44336;border-radius:8px;padding:14px}
-.arma-pend h4{font-size:.75rem;color:#f44336;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+.arma-row .arl{font-size:.72rem;color:var(--ink-dim);min-width:64px}
+/* 2px de fundo entre os segmentos separam as partes sem desenhar borda */
+.arma-row .art{flex:1;height:18px;display:flex;gap:2px}
+.arma-row .art > div{display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--ground);min-width:3px;font-variant-numeric:tabular-nums}
+.arma-row .art > div:first-child{border-radius:4px 0 0 4px}
+.arma-row .art > div:last-child{border-radius:0 4px 4px 0}
+.arma-row .art > div:only-child{border-radius:4px}
+.ars-ok{background:var(--ok)}.ars-no{background:var(--crit)}.ars-na{background:var(--line);color:var(--ink) !important}
+.arma-row .arv{font-size:.68rem;color:var(--ink-dim);min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
+.arma-leg{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:.66rem;color:var(--ink-dim)}
+.arma-leg span{display:inline-flex;align-items:center;gap:5px}
+.arma-leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.arma-pend{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--crit);border-radius:10px;padding:14px}
+.arma-pend h4{font-size:.72rem;color:var(--ink);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
 .pend-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;max-height:300px;overflow-y:auto}
-.grad-section-cppd .grad-bar{border-left:3px solid var(--ok)}
-.grad-section-cppd-sem .grad-bar{border-left:3px solid var(--warn)}
-h3.cppd-title{color:#3DD68C}
-h3.cppd-sem-title{color:#F5A524}
 .pd-sec{margin-bottom:22px}
-.pd-sec h3{font-size:.78rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
-.pd-sec h3 .n{background:#1e3450;color:#fff;border-radius:10px;padding:1px 9px;font-size:.72rem}
-.pd-row{background:#0d1b2a;border-radius:6px;padding:9px 11px;margin-bottom:6px;font-size:.75rem;border-left:3px solid #1e3450}
-.pd-row.crit{border-left-color:#f44336}
-.pd-row.aten{border-left-color:#ff9800}
+.pd-sec h3{font-size:.78rem;color:var(--acc);text-transform:uppercase;letter-spacing:1px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.pd-sec h3 .n{background:var(--raised);color:#fff;border-radius:10px;padding:1px 9px;font-size:.72rem}
+.pd-row{background:var(--ground);border-radius:6px;padding:9px 11px;margin-bottom:6px;font-size:.75rem;border-left:3px solid var(--line)}
+.pd-row:hover{background:var(--raised)}
+.pd-row:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.pd-row.crit{border-left-color:var(--crit)}
+.pd-row.aten{border-left-color:var(--warn)}
 .pd-row .pd-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
-.pd-row .pd-nome{color:#e0e0e0;font-weight:600}
-.pd-row .pd-tag{font-size:.63rem;padding:1px 7px;border-radius:8px;background:#1e3450;color:#8899aa;white-space:nowrap}
-.pd-row .pd-tag.crit{background:#4a1512;color:#ff8a80}
-.pd-row .pd-tag.aten{background:#4a3512;color:#ffcc80}
-.pd-row .pd-txt{color:#8899aa;font-size:.7rem;margin-top:4px;line-height:1.45}
-.pd-nota{background:#12202e;border-left:3px solid #4FC3F7;padding:10px 13px;border-radius:6px;font-size:.7rem;color:#8899aa;line-height:1.55;margin-top:6px}
-.pd-vazio{color:#8899aa;font-size:.73rem;padding:8px 2px}
-.pend-item{background:#0d1b2a;border-radius:6px;padding:8px 10px;font-size:.75rem;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;transition:background .2s}
-.pend-item:hover{background:#1e3450}
-.pend-item .pn{color:#e0e0e0;font-weight:600;font-size:.74rem}
-.pend-item .pp{font-size:.6rem;color:#8899aa}
+.pd-row .pd-nome{color:var(--ink);font-weight:600}
+.pd-row .pd-tag{font-size:.63rem;padding:1px 7px;border-radius:8px;background:var(--raised);color:var(--ink-dim);white-space:nowrap}
+.pd-row .pd-tag.crit{background:#F4564B1F;color:var(--crit)}
+.pd-row .pd-tag.aten{background:#F5A5241F;color:var(--warn)}
+.pd-row .pd-txt{color:var(--ink-dim);font-size:.7rem;margin-top:4px;line-height:1.45}
+.pd-nota{background:var(--ground);border-left:3px solid var(--acc);padding:10px 13px;border-radius:6px;font-size:.7rem;color:var(--ink-dim);line-height:1.55;margin-top:6px}
+.pd-vazio{color:var(--ink-dim);font-size:.73rem;padding:8px 2px}
+.pend-item{background:var(--ground);border-radius:6px;padding:8px 10px;font-size:.75rem;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;transition:background .2s}
+.pend-item:hover{background:var(--raised)}
+.pend-item:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.pend-item .pn{color:var(--ink);font-weight:600;font-size:.74rem}
+.pend-item .pp{font-size:.62rem;color:var(--ink-dim)}
 
 /* LOG */
 .log-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
-.log-fbtn{padding:6px 12px;border-radius:18px;border:1px solid #1e3450;background:#0d1b2a;color:#8899aa;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .2s}
-.log-fbtn:hover,.log-fbtn.on{background:#2196F320;color:#2196F3;border-color:#2196F3}
-.log-clear-btn{margin-left:auto;font-size:.7rem;color:#8899aa;background:transparent;border:1px solid #1e3450;padding:6px 12px;border-radius:6px;cursor:pointer}
-.log-clear-btn:hover{color:#f44336;border-color:#f44336}
+.log-fbtn{padding:6px 12px;border-radius:18px;border:1px solid var(--line);background:var(--ground);color:var(--ink-dim);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .2s}
+.log-fbtn:hover,.log-fbtn.on{background:#4FC3F720;color:var(--acc);border-color:var(--acc)}
+.log-clear-btn{margin-left:auto;font-size:.7rem;color:var(--ink-dim);background:transparent;border:1px solid var(--line);padding:6px 12px;border-radius:6px;cursor:pointer}
+.log-clear-btn:hover{color:var(--crit);border-color:var(--crit)}
 .log-list{display:flex;flex-direction:column;gap:6px}
-.log-e{background:#1a2940;border:1px solid #1e3450;border-radius:8px;padding:10px 14px;display:flex;gap:10px;align-items:center}
+.log-e{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;display:flex;gap:10px;align-items:center}
 .log-i{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
-.li-edit{background:#2196F320;border:1px solid #2196F340;color:#2196F3}
-.li-add{background:#4CAF5020;border:1px solid #4CAF5040;color:#4CAF50}
-.li-del{background:#f4433620;border:1px solid #f4433640;color:#f44336}
-.li-sync{background:#FF980020;border:1px solid #FF980040;color:#FF9800}
-.li-foto{background:#9C27B020;border:1px solid #9C27B040;color:#9C27B0}
+.li-edit{background:#4FC3F720;border:1px solid #4FC3F740;color:var(--acc)}
+.li-add{background:#3DD68C20;border:1px solid #3DD68C40;color:var(--ok)}
+.li-del{background:#F4564B20;border:1px solid #F4564B40;color:var(--crit)}
+.li-sync{background:#F5A52420;border:1px solid #F5A52440;color:var(--warn)}
+.li-foto{background:#B39DDB20;border:1px solid #B39DDB40;color:#B39DDB}
 .log-b{flex:1;min-width:0}
-.log-m{font-size:.78rem;color:#e0e0e0;line-height:1.3}
-.log-m strong{color:#4FC3F7}
-.log-mt{font-size:.62rem;color:#667788;margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+.log-m{font-size:.78rem;color:var(--ink);line-height:1.3}
+.log-m strong{color:var(--acc)}
+.log-mt{font-size:.62rem;color:var(--ink-faint);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
 .log-chip{font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:3px;flex-shrink:0}
-.ch-edit{background:#2196F320;color:#2196F3}.ch-add{background:#4CAF5020;color:#4CAF50}.ch-del{background:#f4433620;color:#f44336}.ch-sync{background:#FF980020;color:#FF9800}.ch-foto{background:#9C27B020;color:#9C27B0}
+.ch-na{background:var(--raised);color:var(--ink-dim)}
+.ch-edit{background:#4FC3F720;color:var(--acc)}.ch-add{background:#3DD68C20;color:var(--ok)}.ch-del{background:#F4564B20;color:var(--crit)}.ch-sync{background:#F5A52420;color:var(--warn)}.ch-foto{background:#B39DDB20;color:#B39DDB}
 
 /* BOLETIM */
 .bol-paper{background:#fff;color:#111;border-radius:8px;padding:32px;font-family:'Times New Roman',serif;max-width:780px;margin:0 auto}
@@ -478,6 +478,8 @@ h3.cppd-sem-title{color:#F5A524}
 .bol-h h2{font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#111}
 .bol-h h3{font-size:.85rem;font-weight:400;margin-top:2px;color:#333}
 .bol-h .dt{margin-top:8px;font-size:.8rem;color:#555;background:#f5f5f5;padding:4px 16px;border-radius:4px;display:inline-block}
+.bol-h .bol-fonte{margin-top:6px;font-size:.68rem;color:#666}
+.bol-nota{font-size:.66rem;color:#555;margin-top:5px}
 .bol-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
 .bk{border:2px solid #ddd;border-radius:5px;padding:10px;text-align:center}
 .bk .bv{font-size:1.6rem;font-weight:700}
@@ -565,93 +567,101 @@ h3.cppd-sem-title{color:#F5A524}
   <div class="cards" id="cardsContainer"></div>
   <div class="grupos" id="gruposContainer"></div>
 
-  <div class="charts">
-    <div class="chart-box"><h3>Distribuição por Posto/Graduação</h3><div class="chart-wrap desktop-only"><canvas id="chartPatente"></canvas></div><div id="mobilePatente" class="mobile-chart-alt"></div></div>
-    <div class="chart-box"><h3>Situação do Efetivo por Categoria</h3><div class="chart-wrap desktop-only"><canvas id="chartSetor"></canvas></div><div id="mobileCat" class="mobile-chart-alt"></div></div>
-  </div>
-  <div class="charts">
-    <div class="chart-box"><h3>CCSV — Total: <span id="ccsvTotal"></span></h3><div class="chart-wrap desktop-only"><canvas id="chartCCSV"></canvas></div></div>
-    <div class="chart-box"><h3>CIA — Total: <span id="ciaTotal"></span></h3><div class="chart-wrap desktop-only"><canvas id="chartCIA"></canvas></div></div>
-  </div>
-  <div class="charts mobile-setor-section">
-    <div class="chart-box" style="grid-column:1/-1"><h3>Distribuição por Setor e Categoria</h3><div id="mobileSetorBars" class="mobile-setor-bars"></div></div>
+  <div class="viz-grid">
+    <section class="viz-card" aria-labelledby="vizSituacaoT">
+      <h3 id="vizSituacaoT">Situação do efetivo <small>parte do efetivo total · clique para ver a lista</small></h3>
+      <div id="vizSituacao"></div>
+    </section>
+    <section class="viz-card" aria-labelledby="vizSetorT">
+      <h3 id="vizSetorT">Situação por setor <small>proporção de cada setor, sem o tempo certo</small></h3>
+      <div id="vizSetor"></div>
+    </section>
+    <section class="viz-card viz-largo" aria-labelledby="vizPatenteT">
+      <h3 id="vizPatenteT">Posto / graduação <small>mesma escala para oficiais e praças</small></h3>
+      <div id="vizPatente" class="viz-cols"></div>
+    </section>
   </div>
 
   <!-- ===== SEÇÕES DE GRUPO (mostram todos os status do grupo) ===== -->
-  <div id="secOficiais" class="grad-section grad-section-oficiais">
-    <h3 class="oficiais-title">Oficiais <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secOficiais" class="grad-section">
+    <h3>Oficiais</h3>
     <div id="gradBarsOficiais"></div>
   </div>
 
-  <div id="secTropa" class="grad-section grad-section-tropa">
-    <h3 class="tropa-title">CIA — Tropa <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secTropa" class="grad-section">
+    <h3>CIA — Tropa</h3>
     <div id="gradBarsTropa"></div>
   </div>
 
-  <div id="secCiaOutros" class="grad-section grad-section-ciaoutros">
-    <h3 class="ciaoutros-title">CIA — Outros Setores <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secCiaOutros" class="grad-section">
+    <h3>CIA — Outros Setores <span class="sec-sub">— guarda, visibilidade, adj. fiscal de dia</span></h3>
     <div id="gradBarsCiaOutros"></div>
   </div>
 
-  <div id="secCCSV" class="grad-section grad-section-ccsv">
-    <h3 class="ccsv-title">CCSV <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secCCSV" class="grad-section">
+    <h3>CCSV</h3>
     <div id="gradBarsCCSV"></div>
   </div>
 
-  <div id="secComCPPD" class="grad-section grad-section-cppd">
-    <h3 class="cppd-title">Com CPPD <span style="font-size:.7rem;color:#667788;font-weight:400">— curso de especialização em praças desportivas</span></h3>
+  <div id="secComCPPD" class="grad-section sec-ok">
+    <h3>Com CPPD <span class="sec-sub">— curso de especialização em praças desportivas</span></h3>
     <div id="gradBarsComCPPD"></div>
   </div>
 
-  <div id="secSemCPPD" class="grad-section grad-section-cppd-sem">
-    <h3 class="cppd-sem-title">Sem CPPD <span style="font-size:.7rem;color:#667788;font-weight:400">— ainda não cursaram ou sem registro</span></h3>
+  <div id="secSemCPPD" class="grad-section sec-warn">
+    <h3>Sem CPPD <span class="sec-sub">— ainda não cursaram ou sem registro</span></h3>
     <div id="gradBarsSemCPPD"></div>
   </div>
 
-  <div id="secAbono" class="grad-section grad-section-abono">
-    <h3 class="abono-title">Abono Permanência <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secAbono" class="grad-section sec-neutro">
+    <h3>Abono Permanência</h3>
     <div id="gradBarsAbono"></div>
   </div>
 
   <!-- ===== SEÇÕES DE STATUS (podem conter membros de qualquer grupo) ===== -->
-  <div id="secFerias" class="grad-section grad-section-ferias">
-    <h3 class="ferias-title">De Férias <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secFerias" class="grad-section sec-neutro">
+    <h3>De Férias</h3>
     <div id="gradBarsFerias"></div>
   </div>
 
-  <div id="secAptoB" class="grad-section grad-section-aptob">
-    <h3 class="aptob-title">Apto Cat B <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secAptoB" class="grad-section sec-warn">
+    <h3>Apto Cat B</h3>
     <div id="gradBarsAptoB"></div>
   </div>
 
-  <div id="secAptoC" class="grad-section grad-section-aptoc">
-    <h3 class="aptoc-title">Apto Cat C <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secAptoC" class="grad-section sec-warn">
+    <h3>Apto Cat C</h3>
     <div id="gradBarsAptoC"></div>
   </div>
 
-  <div id="secLTS" class="grad-section grad-section-lts">
-    <h3 class="lts-title">LTS (Licença Tratamento Saúde) <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secLTS" class="grad-section sec-crit">
+    <h3>LTS <span class="sec-sub">— licença para tratamento de saúde</span></h3>
     <div id="gradBarsLTS"></div>
   </div>
 
-  <div id="secAGRR" class="grad-section grad-section-agrr">
-    <h3 class="agrr-title">Aguardando R.R <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secOutros" class="grad-section sec-crit">
+    <h3>Outros Afastamentos <span class="sec-sub">— licença especial, curso, baixado…</span></h3>
+    <div id="gradBarsOutros"></div>
+  </div>
+
+  <div id="secAGRR" class="grad-section sec-crit">
+    <h3>Aguardando R.R</h3>
     <div id="gradBarsAGRR"></div>
   </div>
 
-  <div id="secReforma" class="grad-section grad-section-reforma">
-    <h3 class="reforma-title">Aguardando Reforma <span style="font-size:.7rem;color:#667788;font-weight:400">— clique para expandir</span></h3>
+  <div id="secReforma" class="grad-section sec-crit">
+    <h3>Aguardando Reforma</h3>
     <div id="gradBarsReforma"></div>
   </div>
 
-  <div id="secTC" class="grad-section grad-section-tc">
-    <h3 class="tc-title">Tempo Certo <span style="font-size:.7rem;color:#8D6E63;font-weight:400">— excluído do efetivo total — clique para expandir</span></h3>
+  <div id="secTC" class="grad-section sec-fora">
+    <h3>Tempo Certo <span class="sec-sub">— fora do efetivo total</span></h3>
     <div id="gradBarsTC"></div>
   </div>
 </div>
 
 <!-- MODAL ADD/EDIT -->
-<div class="modal-overlay" id="modalOverlay">
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal">
     <style>
       .aviso-planilha { background:#1e3450; border-left:4px solid #ff9800; color:#cfe0f5;
@@ -752,25 +762,25 @@ h3.cppd-sem-title{color:#F5A524}
 </div>
 
 <!-- MODAL COMPARTILHAR -->
-<div class="modal-overlay" id="shareOverlay">
+<div class="modal-overlay" id="shareOverlay" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
   <div class="modal" style="max-width:550px">
-    <h2><span>Compartilhar Dashboard</span><button class="close" onclick="fecharCompartilhar()">&times;</button></h2>
+    <h2><span id="shareTitle">Compartilhar Dashboard</span><button class="close" aria-label="Fechar" onclick="fecharCompartilhar()">&times;</button></h2>
     <div style="display:flex;flex-direction:column;gap:16px">
       <div>
         <label style="font-size:.75rem;color:#FF9800;text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Link Somente Visualização</label>
         <div style="display:flex;gap:8px">
-          <input type="text" id="linkView" readonly style="flex:1;padding:10px 12px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.82rem">
+          <input type="text" id="linkView" readonly aria-label="Link somente visualização" style="flex:1;padding:10px 12px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:.82rem">
           <button class="btn btn-outline" onclick="copiarLink('linkView')">Copiar</button>
         </div>
-        <div style="font-size:.7rem;color:#667788;margin-top:4px">Quem receber este link pode apenas consultar os dados</div>
+        <div style="font-size:.7rem;color:var(--ink-faint);margin-top:4px">Quem receber este link pode apenas consultar os dados</div>
       </div>
       <div class="edit-only">
         <label style="font-size:.75rem;color:#4CAF50;text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Link Admin (Edição Completa)</label>
         <div style="display:flex;gap:8px">
-          <input type="text" id="linkAdmin" readonly style="flex:1;padding:10px 12px;background:#0d1b2a;border:1px solid #1e3450;border-radius:6px;color:#e0e0e0;font-size:.82rem">
+          <input type="text" id="linkAdmin" readonly aria-label="Link admin" style="flex:1;padding:10px 12px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:.82rem">
           <button class="btn btn-success" onclick="copiarLink('linkAdmin')">Copiar</button>
         </div>
-        <div style="font-size:.7rem;color:#667788;margin-top:4px">Quem receber este link pode adicionar, editar e excluir militares</div>
+        <div style="font-size:.7rem;color:var(--ink-faint);margin-top:4px">Quem receber este link pode editar abono, observação e fotos</div>
       </div>
     </div>
   </div>
@@ -849,9 +859,7 @@ const ORDEM_PATENTE    = {'CEL PM':1,'CEL. PM':1,'TEN CEL PM':2,'MAJ PM':3,'CAP 
 
 // ─── ESTADO ─────────────────────────────────────────────────────────────────
 let efetivo        = [];
-let editingIdx     = -1;
 let firebaseReady  = false;
-let savingToFB     = false;
 let fotosCache     = {};
 let _currentFoto   = null; // base64 da foto selecionada no modal
 let _removendoFoto = false;
@@ -923,19 +931,81 @@ function isCiaOutros(m) {
 }
 function isCCSV(m) { return m.cia === 'CCSV'; }
 
+// ─── SETORES ─────────────────────────────────────────────────────────────────
+// Setores mutuamente exclusivos para graficos, Armamento e Boletim: oficial conta so' como
+// oficial, mesmo lotado na CCSV (antes entrava nas duas linhas), e quem nao
+// tiver setor reconhecido aparece numa linha propria em vez de sumir da soma.
+const SETORES   = ['OFICIAIS', 'CIA', 'CCSV', 'OUTROS'];
+const NOME_SETOR = { OFICIAIS: 'Oficiais', CIA: 'CIA', CCSV: 'CCSV', OUTROS: 'Sem setor' };
+function setorDe(m) {
+  if (isOficial(m))     return 'OFICIAIS';
+  if (m.cia === 'CIA')  return 'CIA';
+  if (m.cia === 'CCSV') return 'CCSV';
+  return 'OUTROS';
+}
+
 // ─── CATEGORIA ───────────────────────────────────────────────────────────────
+// Maiusculas, sem acento e com espacos simples -- a planilha e' digitada a mao.
+function normCampo(v) {
+  return String(v || '').toUpperCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+// Afastamentos que a planilha registra na FUNCAO ou na SITUACAO e que o
+// dashboard nao conhecia. Caiam no "return 'oper'" do fim e contavam como
+// Apto A: o militar BAIXADO, o de licenca especial (L.E) e o que esta em
+// CURSO entravam na operacionalidade e no card Pronto.
+const OUTROS_AFAST_RX = /\bBAIXAD[OA]\b|(^|[^A-Z])L\.?\s?E\.?($|[^A-Z])|LICENCA ESPECIAL|\bCURSO\b|\bPRES[OA]\b|\bLTIP\b|\bLTSPF\b|MATERNIDADE|PATERNIDADE|GESTANTE|\bAGREGAD[OA]\b/;
+
+// "APTO CAT A", "APTO A", "APTA CAT. A", "APTO CATEGORIA A" -> 'A'
+function letraAptidao(s) {
+  const t = s.replace(/\./g, '').replace(/CATEGORIA/, 'CAT');
+  const r = t.match(/^APT[OA](?: CAT)? ([ABC])$/);
+  return r ? r[1] : null;
+}
+
 function getCategoria(m) {
-  const f = (m.funcao||'').toUpperCase();
-  if (f.includes('FÉRIAS') || f.includes('FERIAS'))       return 'ferias';
-  if (f.includes('AGUARDANDO R') || f.includes('AG. R.R')) return 'agrr';
-  const s = (m.sit||'').toUpperCase();
-  if (s === 'APTO CAT B') return 'aptob';
-  if (s === 'APTO CAT C') return 'aptoc';
+  const f = normCampo(m.funcao);
+  if (f.includes('FERIAS'))                               return 'ferias';
+  if (f.includes('AGUARDANDO R') || f.includes('AG R.R') || f.includes('AG. R.R')) return 'agrr';
+  if (/\bLTS\b/.test(f))                                  return 'lts';
+  if (OUTROS_AFAST_RX.test(f))                            return 'outros';
+  const s = normCampo(m.sit);
+  const apt = letraAptidao(s);
+  if (apt === 'B') return 'aptob';
+  if (apt === 'C') return 'aptoc';
   if (s.includes('LTS'))        return 'lts';
   if (s.includes('AGUARDANDO')) return 'agrr';
   if (s.includes('REFORMA'))    return 'reforma';
   if (m.de === 'TEMPO' && m.ate === 'CERTO') return 'tempocerto';
-  return 'oper';
+  // Situacao em branco continua contando como apta (e aparece em Pendencias).
+  // Situacao preenchida e irreconhecivel NAO vira Apto A por omissao.
+  if (s === '' || apt === 'A') return 'oper';
+  return 'outros';
+}
+
+// Nome, secao e estado de cada categoria (fora o tempo certo). O estado decide
+// a cor nos graficos -- a mesma regra dos cards.
+const CATEGORIAS = [
+  { k: 'oper',    nome: 'Apto A',              est: 'ok',     sec: 'secOficiais' },
+  { k: 'aptob',   nome: 'Apto cat B',          est: 'warn',   sec: 'secAptoB'    },
+  { k: 'aptoc',   nome: 'Apto cat C',          est: 'warn',   sec: 'secAptoC'    },
+  { k: 'ferias',  nome: 'De férias',           est: 'neutro', sec: 'secFerias'   },
+  { k: 'lts',     nome: 'LTS',                 est: 'crit',   sec: 'secLTS'      },
+  { k: 'outros',  nome: 'Outros afastamentos', est: 'crit',   sec: 'secOutros',
+    dica: 'licença especial, curso, baixado e situações não reconhecidas' },
+  { k: 'agrr',    nome: 'Aguardando R.R',      est: 'crit',   sec: 'secAGRR'     },
+  { k: 'reforma', nome: 'Aguardando reforma',  est: 'crit',   sec: 'secReforma'  },
+];
+const NOME_CATEGORIA = Object.fromEntries(CATEGORIAS.map(c => [c.k, c.nome]));
+NOME_CATEGORIA.tempocerto = 'Tempo certo';
+
+// Situacao sanitaria que o dashboard nao sabe ler -- vai para Pendencias.
+function sitIrreconhecivel(m) {
+  const s = normCampo(m.sit);
+  if (!s || letraAptidao(s)) return false;
+  return !/LTS|AGUARDANDO|REFORMA/.test(s) && !OUTROS_AFAST_RX.test(s);
 }
 
 // ─── FOTOS ────────────────────────────────────────────────────────────────────
@@ -953,7 +1023,7 @@ function loadFotosVisiveis(container) {
         const val = snap.val();
         if (val) {
           fotosCache[key] = val;
-          document.querySelectorAll(`.foto-row[data-rg="${rg}"]`).forEach(i => { i.src = val; });
+          document.querySelectorAll(`.foto-row[data-rg="${CSS.escape(rg)}"]`).forEach(i => { i.src = val; });
         }
       });
     }
@@ -1002,7 +1072,7 @@ function saveFoto(rg, base64) {
 function deleteFoto(rg) {
   const key = fotoKey(rg);
   delete fotosCache[key];
-  document.querySelectorAll(`.foto-row[data-rg="${rg}"]`).forEach(i => { i.src = PLACEHOLDER_SVG; });
+  document.querySelectorAll(`.foto-row[data-rg="${CSS.escape(String(rg))}"]`).forEach(i => { i.src = PLACEHOLDER_SVG; });
   return fotosRef.child(key).remove();
 }
 
@@ -1015,6 +1085,30 @@ function hashDados(arr) {
   let h = 5381;
   for (let i = 0; i < txt.length; i++) h = ((h * 33) ^ txt.charCodeAt(i)) >>> 0;
   return arr.length + '-' + h.toString(36);
+}
+
+// Onde cada militar mora dentro de /efetivo. O Apps Script grava um array, entao
+// a chave e' a posicao -- e a posicao muda quando a planilha ganha ou perde uma
+// linha. Por isso o dashboard grava abono/obs pelo RG, nunca pelo indice.
+let chaveFirebasePorRg = {};
+// true so' depois que o dado REAL do Firebase chegou. Ate' la a tela mostra a
+// copia local, que pode ter meses (efetivo_data.js e' a semente de maio).
+let dadosDoFirebase = false;
+// Quando esta pagina grava abono/obs, o Firebase devolve o proprio dado.
+let _ecoDeGravacaoLocal = 0;
+
+function normRg(rg) { return String(rg == null ? '' : rg).replace(/[.\-\s]/g, '').trim(); }
+
+// Data de hoje no fuso de Brasilia. toISOString() usa UTC e virava o dia as 21h.
+function hojeLocalISO(d) {
+  d = d || new Date();
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo',
+      year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  } catch (e) {
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
 }
 
 function loadData() {
@@ -1031,31 +1125,41 @@ function loadData() {
   efetivoRef.on('value', snapshot => {
     const data = snapshot.val();
     if (data) {
-      let arr = Array.isArray(data) ? data : Object.values(data);
+      const pares = Array.isArray(data) ? data.map((m, k) => [String(k), m]) : Object.entries(data);
       // Fidelidade à planilha: exigir apenas registro válido com nome.
       // Função/situação em branco na planilha NÃO podem derrubar o militar.
-      arr = arr.filter(m => m && typeof m === 'object' && m.nome);
+      const validos = pares.filter(([, m]) => m && typeof m === 'object' && m.nome);
       // Garantir campos string para o restante do código não quebrar
-      arr = arr.map(m => ({ gh:'', rg:'', id:'', cia:'', funcao:'', sit:'', de:'', ate:'', arma:'', colete:'', ferias:'', abono:'', obs:'', cppd:'', ...m }));
+      const arr = validos.map(([, m]) => ({ gh:'', rg:'', id:'', cia:'', funcao:'', sit:'', de:'', ate:'', arma:'', colete:'', ferias:'', abono:'', obs:'', cppd:'', ...m }));
       if (arr.length > 0) {
+        chaveFirebasePorRg = {};
+        validos.forEach(([k, m]) => { const r = normRg(m.rg); if (r) chaveFirebasePorRg[r] = k; });
+        const primeiraCarga = !dadosDoFirebase;
+        dadosDoFirebase = true;
+        // A hora da sincronização vem do Apps Script (ver syncRef abaixo).
+        // Antes carimbava new Date() aqui, ou seja, o relógio de quem abria a
+        // página — o cabeçalho parecia atual mesmo com a sync parada há dias.
+        firebaseReady = true;
         const newJSON = JSON.stringify(arr);
         if (newJSON !== JSON.stringify(efetivo)) {
           efetivo = arr;
           localStorage.setItem(STORAGE_KEY, newJSON);
           localStorage.setItem(DATA_VERSION_KEY, currentVersion);
           refreshAll();
-          showToast('🔄 Dados atualizados em tempo real!', 'info');
+          // Na primeira carga a pagina so' troca a copia local pelo dado vivo, e
+          // o eco de uma gravacao feita aqui mesmo nao e' novidade: anunciar
+          // "atualizados em tempo real" nesses casos era ruido.
+          if (!primeiraCarga && Date.now() - _ecoDeGravacaoLocal > 5000)
+            showToast('🔄 Dados atualizados em tempo real!', 'info');
         }
-        // A hora da sincronização vem do Apps Script (ver syncRef abaixo).
-        // Antes carimbava new Date() aqui, ou seja, o relógio de quem abria a
-        // página — o cabeçalho parecia atual mesmo com a sync parada há dias.
-        firebaseReady = true;
+        gravarSnapshotDiario();
       }
     } else {
       firebaseReady = true;
-      efetivoRef.set(efetivo).then(() => {
-        showToast('✅ Dados enviados ao Firebase', 'success');
-      }).catch(err => showToast('❌ Erro Firebase: ' + err.message, 'error'));
+      // A planilha e' a fonte da verdade: /efetivo vazio se resolve na proxima
+      // sincronizacao do Apps Script. Antes o navegador de QUALQUER visitante
+      // gravava ali a copia local -- a semente de maio, por cima de tudo.
+      showToast('⚠️ O Firebase está sem o efetivo. Exibindo a última cópia salva neste aparelho.', 'error');
     }
   }, err => {
     showToast('❌ Erro conexão Firebase: ' + err.message, 'error');
@@ -1066,7 +1170,15 @@ function loadData() {
 
 // Hora REAL da ultima sincronizacao planilha -> Firebase, gravada pelo Apps Script.
 // Se o gatilho parar, o cabecalho passa a denunciar em vez de mentir.
+let _ultimaSyncIso = null;
+
+function ultimaSyncTexto() {
+  const d = _ultimaSyncIso ? new Date(_ultimaSyncIso) : null;
+  return d && !isNaN(d) ? d.toLocaleString('pt-BR') : 'não informado';
+}
+
 function renderUltimaSync(iso) {
+  _ultimaSyncIso = iso || null;
   const hd = document.getElementById('headerDate');
   if (!hd) return;
 
@@ -1109,58 +1221,64 @@ syncRef.on('value',
     hd.style.color = '#F5A524';
   });
 
-function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(efetivo));
-  if (isAdmin && !savingToFB) {
-    savingToFB = true;
-    efetivoRef.set(efetivo).then(() => { savingToFB = false; })
-      .catch(err => { savingToFB = false; showToast('❌ Erro ao salvar: ' + err.message, 'error'); });
-  }
-}
+// Pagina aberta por horas (a TV do quartel, a aba esquecida): o aviso de atraso
+// era calculado so' quando o carimbo chegava -- parada ha 3h, a sync seguia
+// "em dia". E os prazos de LTS ("vence hoje") ficavam presos no dia da abertura.
+let _diaRenderizado = hojeLocalISO();
+setInterval(() => {
+  if (_ultimaSyncIso) renderUltimaSync(_ultimaSyncIso);
+  const hoje = hojeLocalISO();
+  if (hoje !== _diaRenderizado) { _diaRenderizado = hoje; refreshAll(); gravarSnapshotDiario(); }
+}, 60000);
 
 // ─── MÉTRICAS ─────────────────────────────────────────────────────────────────
 function calcMetrics() {
-  const tc      = efetivo.filter(m => getCategoria(m) === 'tempocerto').length;
-  const rr      = efetivo.filter(m => getCategoria(m) === 'agrr').length;
+  // A categoria e' calculada uma vez por militar; o resto so' conta.
+  const cat   = new Map(efetivo.map(m => [m, getCategoria(m)]));
+  const conta = c => efetivo.filter(m => cat.get(m) === c).length;
+  const tc      = conta('tempocerto');
+  const rr      = conta('agrr');
   const t       = efetivo.length - tc;  // exclui apenas TC
-  const aptoA   = efetivo.filter(m => getCategoria(m) === 'oper').length;
-  const aptoB   = efetivo.filter(m => getCategoria(m) === 'aptob').length;
-  const aptoC   = efetivo.filter(m => getCategoria(m) === 'aptoc').length;
-  const lts     = efetivo.filter(m => getCategoria(m) === 'lts').length;
-  const reforma = efetivo.filter(m => getCategoria(m) === 'reforma').length;
-  const fer     = efetivo.filter(m => getCategoria(m) === 'ferias').length;
-  const abono   = efetivo.filter(m => m.abono && m.abono.trim()).length;
+  const aptoA   = conta('oper');
+  const aptoB   = conta('aptob');
+  const aptoC   = conta('aptoc');
+  const lts     = conta('lts');
+  const outros  = conta('outros');
+  const reforma = conta('reforma');
+  const fer     = conta('ferias');
+  // Mesma base da secao Abono Permanencia, que deixa o tempo certo de fora.
+  const abono   = efetivo.filter(m => String(m.abono || '').trim() && cat.get(m) !== 'tempocerto').length;
 
-  const excluidos = (m) => getCategoria(m) === 'tempocerto';
+  const excluidos = (m) => cat.get(m) === 'tempocerto';
   const ofAtivos   = efetivo.filter(m => isOficial(m) && !excluidos(m)).length;
   const pr         = t - ofAtivos;
-  const aptoATropa = efetivo.filter(m => isTropaGrupo(m) && getCategoria(m) === 'oper').length;
-  const aptoACCSV  = efetivo.filter(m => isCCSV(m) && getCategoria(m) === 'oper').length;
-  const aptoAOutros= efetivo.filter(m => isCiaOutros(m) && getCategoria(m) === 'oper').length;
+  const aptoATropa = efetivo.filter(m => isTropaGrupo(m) && cat.get(m) === 'oper').length;
+  const aptoACCSV  = efetivo.filter(m => isCCSV(m) && cat.get(m) === 'oper').length;
+  const aptoAOutros= efetivo.filter(m => isCiaOutros(m) && cat.get(m) === 'oper').length;
   const oper       = t > 0 ? (aptoA / t * 100).toFixed(1) : '0.0';
 
   // Equipamento: "pronto pra rua" exige apto CAT A + arma E colete confirmados.
   // Campo em branco NAO e' o mesmo que "nao tem" -- e' desconhecido, e por isso
   // vira uma terceira contagem em vez de inflar os que faltam.
-  const aptosA        = efetivo.filter(m => getCategoria(m) === 'oper');
+  const aptosA        = efetivo.filter(m => cat.get(m) === 'oper');
   const prontoRua     = aptosA.filter(m => equipOk(m.arma) && equipOk(m.colete)).length;
   const equipFalta    = aptosA.filter(m => equipNao(m.arma) || equipNao(m.colete)).length;
   const equipSemInfo  = aptosA.length - prontoRua - equipFalta;
   const prontoPct     = aptosA.length > 0 ? (prontoRua / aptosA.length * 100).toFixed(1) : '0.0';
 
   // CPPD conta sobre o efetivo fora do tempo certo, mesma base do restante.
-  const semTC       = efetivo.filter(m => getCategoria(m) !== 'tempocerto');
+  const semTC       = efetivo.filter(m => cat.get(m) !== 'tempocerto');
   const comCppd     = semTC.filter(temCPPD).length;
   const semCppd     = semTC.filter(semCPPD).length;
   const cppdSemInfo_= semTC.filter(cppdSemInfo).length;
   const cppdPct     = semTC.length > 0 ? (comCppd / semTC.length * 100).toFixed(1) : '0.0';
 
   const patentes = {};
-  efetivo.forEach(m => { if (getCategoria(m) !== 'tempocerto') patentes[m.gh] = (patentes[m.gh] || 0) + 1; });
+  semTC.forEach(m => { const g = (m.gh || '').trim().toUpperCase(); patentes[g] = (patentes[g] || 0) + 1; });
   const setores = {};
   efetivo.forEach(m => { setores[m.cia] = (setores[m.cia] || 0) + 1; });
 
-  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOutros, aptoB, aptoC, lts, rr, reforma, fer, tc, abono, ofAtivos, pr, oper, patentes, setores,
+  return { t, aptoA, aptoATropa, aptoACCSV, aptoAOutros, aptoB, aptoC, lts, outros, rr, reforma, fer, tc, abono, ofAtivos, pr, oper, patentes, setores,
            prontoRua, equipFalta, equipSemInfo, prontoPct,
            comCppd, semCppd, cppdSemInfo: cppdSemInfo_, cppdPct };
 }
@@ -1251,7 +1369,8 @@ function renderCards(m) {
     <div class="grupo">
       <h4>Afastamentos</h4>
       <div class="chips">
-        ${chip('Afastados',   m.lts + m.reforma, "irPara('secLTS')",    `${m.lts} em LTS · ${m.reforma} aguardando reforma`)}
+        ${chip('Afastados',   m.lts + m.outros + m.reforma, `irPara('${m.lts ? 'secLTS' : m.outros ? 'secOutros' : 'secReforma'}')`,
+               `${m.lts} em LTS · ${m.outros} em outros afastamentos (licença especial, curso, baixado…) · ${m.reforma} aguardando reforma`)}
         ${chip('De férias',   m.fer,             "irPara('secFerias')", 'Em gozo de férias')}
         ${chip('Tempo certo', m.tc,              "irPara('secTC')",     'Fora da contagem do efetivo total')}
       </div>
@@ -1260,171 +1379,156 @@ function renderCards(m) {
 }
 
 // ─── GRÁFICOS ─────────────────────────────────────────────────────────────────
-let chartPatente = null, chartSetor = null, chartCCSV = null, chartCIA = null;
+// Barras em HTML em vez de Chart.js. Antes havia dois desenhos, um para desktop
+// e outro para celular, e cada um deixava caixas vazias no outro ("CCSV —
+// Total:" sem nada no celular; "Distribuição por Setor" vazia no desktop). Agora
+// a mesma peça serve as duas telas, o texto e' lido pelo leitor de tela e nada
+// precisa ser redesenhado quando a janela muda de tamanho.
+//
+// Cor = estado, a mesma regra dos cards: verde disponivel, ambar restrito,
+// vermelho indisponivel, cinza neutro (ferias). Validado para daltonismo
+// (protan/deutan): o par vizinho mais proximo, verde x ambar, fica em ΔE 10,2
+// -- a paleta antiga punha Apto A e Apto B em ΔE 3,6, indistinguiveis. Todo
+// segmento tem ainda rotulo, legenda e dica, entao a cor nunca e' o unico canal.
 
-function renderCharts(m) {
-  const patOrder  = ['CEL PM','CEL. PM','TEN CEL PM','MAJ PM','CAP PM','1 TEN PM','2 TEN PM','ASP OF PM','SUBTEN PM','1 SGT PM','2 SGT PM','3 SGT PM','CB PM','SD PM'];
-  const patLabels = patOrder.filter(p => m.patentes[p]);
-  const patValues = patLabels.map(p => m.patentes[p] || 0);
-  const patColors = patLabels.map(p => OFICIAIS_KW.some(k => p.includes(k)) ? '#FF9800' : '#2196F3');
-
-  if (chartPatente) chartPatente.destroy();
-  const isMobile = window.innerWidth <= 600;
-  chartPatente = new Chart(document.getElementById('chartPatente'), {
-    type: 'bar',
-    data: { labels: patLabels, datasets: [{ data: patValues, backgroundColor: patColors, borderRadius: 4, barThickness: isMobile ? 14 : 18 }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, aspectRatio: isMobile ? 1 : 1.5,
-      plugins: { legend: { display: false } },
-      scales: { x: { grid: { color: '#1e3450' }, ticks: { color: '#8899aa', font: { size: isMobile ? 9 : 11 } } },
-                y: { grid: { display: false }, ticks: { color: '#e0e0e0', font: { size: isMobile ? 9 : 11 } } } } }
-  });
-
-  const catData = [
-    { label: 'Apto A', val: m.aptoA,  color: '#4CAF50', sec: 'secOficiais' },
-    { label: 'Apto B', val: m.aptoB,  color: '#FF9800', sec: 'secAptoB' },
-    { label: 'Apto C', val: m.aptoC,  color: '#FF5722', sec: 'secAptoC' },
-    { label: 'Férias', val: m.fer,    color: '#00BCD4', sec: 'secFerias' },
-    { label: 'LTS',    val: m.lts,    color: '#f44336', sec: 'secLTS' },
-    { label: 'Ag. R.R',val: m.rr,     color: '#AB47BC', sec: 'secAGRR' },
-    { label: 'Reforma',val: m.reforma,color: '#795548', sec: 'secReforma' },
-    { label: 'T. Certo',val: m.tc,    color: '#8D6E63', sec: 'secTC' }
-  ].filter(c => c.val > 0);
-
-  const catLabels = catData.map(c => c.label);
-  const catValues = catData.map(c => c.val);
-  const catColors = catData.map(c => c.color);
-  const catSecs   = Object.fromEntries(catData.map(c => [c.label, c.sec]));
-
-  if (chartSetor) chartSetor.destroy();
-  chartSetor = new Chart(document.getElementById('chartSetor'), {
-    type: 'doughnut',
-    data: { labels: catLabels, datasets: [{ data: catValues, backgroundColor: catColors, borderColor: '#1a2940', borderWidth: 3 }] },
-    options: { responsive: true, maintainAspectRatio: true, aspectRatio: isMobile ? 1 : 1.5,
-      onClick: (evt, elements) => { if (elements.length > 0) { const s = catSecs[catLabels[elements[0].index]]; if (s) irPara(s); } },
-      plugins: { legend: { position: 'bottom',
-        onClick: (evt, item) => { const s = catSecs[item.text]; if (s) irPara(s); },
-        labels: { color: '#e0e0e0', padding: isMobile ? 8 : 12, font: { size: isMobile ? 10 : 11 }, boxWidth: isMobile ? 12 : 40, cursor: 'pointer' }
-      } }
-    }
-  });
-  document.getElementById('chartSetor').style.cursor = 'pointer';
-
-  // Mobile: patentes
-  document.getElementById('mobilePatente').innerHTML = patLabels.map((p, i) => {
-    const pct = (patValues[i] / Math.max(...patValues) * 100).toFixed(0);
-    return `<div class="mob-row"><span class="mob-label">${p.replace(' PM','')}</span><div class="mob-bar-bg"><div class="mob-bar-fill" style="width:${pct}%;background:${patColors[i]}">${patValues[i]>2?patValues[i]:''}</div></div><span class="mob-val" style="color:${patColors[i]}">${patValues[i]}</span></div>`;
-  }).join('');
-
-  // Mobile: categorias
-  const catMax = Math.max(...catValues, 1);
-  document.getElementById('mobileCat').innerHTML = catData.map((c, i) => {
-    const pct    = (c.val / m.t * 100).toFixed(1);
-    const barPct = (c.val / catMax * 100).toFixed(0);
-    const sec    = catSecs[c.label] || '';
-    return `<div class="mob-cat-bar" ${sec ? `onclick="irPara('${sec}')"` : ''} style="cursor:${sec?'pointer':'default'}">
-      <div class="mob-cat-head"><div class="mob-cat-dot" style="background:${c.color}"></div><span class="mob-cat-name">${c.label}</span><span class="mob-cat-num" style="color:${c.color}">${c.val} <small style="color:#8899aa;font-weight:400">(${pct}%)</small></span></div>
-      <div class="mob-cat-track"><div class="mob-cat-fill" style="width:${barPct}%;background:${c.color}"></div></div>
-    </div>`;
-  }).join('');
+function barraH(o) {
+  const acao = o.alvo
+    ? `role="button" tabindex="0" onclick="${o.alvo}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${o.alvo}}"`
+    : '';
+  // Barra de valor > 0 nunca some: 1.5% de largura minima.
+  const w = o.valor > 0 ? Math.max(o.largura, 1.5) : 0;
+  return `<div class="hbar${o.alvo ? ' clicavel' : ''}" ${acao} title="${esc(o.dica || o.rotulo)}">
+    <span class="hbar-rot">${esc(o.rotulo)}</span>
+    <span class="hbar-trilho"><i class="f-${o.est}" style="width:${w.toFixed(2)}%"></i></span>
+    <span class="hbar-val">${o.valor}${o.extra ? `<small>${o.extra}</small>` : ''}</span>
+  </div>`;
 }
 
-function renderSetorCharts() {
-  const isMobile  = window.innerWidth <= 600;
-  const catKeys   = ['oper','aptob','aptoc','ferias','lts','agrr','reforma','tempocerto'];
-  const catNames  = {oper:'Apto A',aptob:'Apto B',aptoc:'Apto C',ferias:'Férias',lts:'LTS',agrr:'Ag. R.R',reforma:'Reforma',tempocerto:'T. Certo'};
-  const catColors = {oper:'#4CAF50',aptob:'#FF9800',aptoc:'#FF5722',ferias:'#00BCD4',lts:'#f44336',agrr:'#AB47BC',reforma:'#795548',tempocerto:'#8D6E63'};
-  const setorColors = {OFICIAIS:'#FFD600',CIA:'#2196F3',CCSV:'#26C6DA'};
+const GRUPOS_SETOR = [
+  { nome: 'Apto A',   est: 'ok',     cats: ['oper'] },
+  { nome: 'Restrito', est: 'warn',   cats: ['aptob', 'aptoc'],                    det: 'cat B/C' },
+  { nome: 'Férias',   est: 'neutro', cats: ['ferias'] },
+  { nome: 'Afastado', est: 'crit',   cats: ['lts', 'outros', 'agrr', 'reforma'], det: 'LTS, outros, Ag. R.R, reforma' },
+];
 
-  function buildSetorData(setor) {
-    const cats = {};
-    efetivo.filter(m => m.cia === setor).forEach(m => { const c = getCategoria(m); cats[c] = (cats[c]||0)+1; });
-    const labels = [], values = [], colors = [];
-    catKeys.forEach(k => { if (cats[k] > 0) { labels.push(catNames[k]); values.push(cats[k]); colors.push(catColors[k]); } });
-    return { labels, values, colors, total: efetivo.filter(m => m.cia === setor).length };
-  }
+function renderViz(m) {
+  const pct = (n, t) => t > 0 ? (n / t * 100).toFixed(1) + '%' : '—';
 
-  let barsHTML = '';
-  ['OFICIAIS','CIA','CCSV'].forEach(setor => {
-    const d = buildSetorData(setor);
-    if (d.total === 0) return;
-    const pctTotal = (d.total / efetivo.length * 100).toFixed(1);
-    let segs = '', legend = '';
-    d.labels.forEach((l, i) => {
-      const pct = (d.values[i] / d.total * 100);
-      segs   += `<div class="setor-bar-seg" style="width:${pct}%;background:${d.colors[i]}">${pct > 8 ? d.values[i] : ''}</div>`;
-      legend += `<div class="setor-bar-legend-item"><div class="dot" style="background:${d.colors[i]}"></div>${l} ${d.values[i]}</div>`;
-    });
-    barsHTML += `<div class="setor-bar-item"><div class="setor-label" style="color:${setorColors[setor]}">${setor} (${d.total}) <span>${pctTotal}% do total</span></div><div class="setor-bar-track">${segs}</div><div class="setor-bar-legend">${legend}</div></div>`;
-  });
-  document.getElementById('mobileSetorBars').innerHTML = barsHTML;
+  // ── 1. Situação do efetivo: cada categoria como parte do total (sem TC) ──
+  const cont = { oper: m.aptoA, aptob: m.aptoB, aptoc: m.aptoC, ferias: m.fer,
+                 lts: m.lts, outros: m.outros, agrr: m.rr, reforma: m.reforma };
+  document.getElementById('vizSituacao').innerHTML =
+    CATEGORIAS.map(c => barraH({
+      rotulo: c.nome, valor: cont[c.k], largura: m.t > 0 ? cont[c.k] / m.t * 100 : 0, est: c.est,
+      // Linha zerada nao leva a lugar nenhum: a secao dela fica escondida.
+      alvo: cont[c.k] > 0 ? `irPara('${c.sec}')` : null, extra: pct(cont[c.k], m.t),
+      dica: `${c.nome}: ${cont[c.k]} de ${m.t} (${pct(cont[c.k], m.t)})${c.dica ? ' — ' + c.dica : ''}`
+    })).join('')
+    + (m.tc > 0 ? `<div class="viz-nota clicavel" role="button" tabindex="0" onclick="irPara('secTC')"
+         onkeydown="if(event.key==='Enter'){irPara('secTC')}">+ ${m.tc} em tempo certo, fora do total de ${m.t}</div>` : '');
 
-  if (isMobile) { if (chartCCSV) { chartCCSV.destroy(); chartCCSV = null; } if (chartCIA) { chartCIA.destroy(); chartCIA = null; } return; }
+  // ── 2. Situação por setor: 100% empilhado, 4 grupos de estado ──
+  const linhas = SETORES.map(s => {
+    const lista = efetivo.filter(x => setorDe(x) === s && getCategoria(x) !== 'tempocerto');
+    const porCat = {};
+    lista.forEach(x => { const c = getCategoria(x); porCat[c] = (porCat[c] || 0) + 1; });
+    return { s, total: lista.length, porCat };
+  }).filter(l => l.total > 0);
 
-  const ccsvData = buildSetorData('CCSV');
-  document.getElementById('ccsvTotal').textContent = ccsvData.total;
-  if (chartCCSV) chartCCSV.destroy();
-  chartCCSV = new Chart(document.getElementById('chartCCSV'), {
-    type: 'doughnut',
-    data: { labels: ccsvData.labels, datasets: [{ data: ccsvData.values, backgroundColor: ccsvData.colors, borderColor: '#1a2940', borderWidth: 3 }] },
-    options: { responsive: true, maintainAspectRatio: true, aspectRatio: 1.5, plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0', padding: 12, font: { size: 11 } } } } }
-  });
+  document.getElementById('vizSetor').innerHTML = linhas.map(l => {
+    const segs = GRUPOS_SETOR.map(g => {
+      const n = g.cats.reduce((a, c) => a + (l.porCat[c] || 0), 0);
+      if (!n) return '';
+      const w = n / l.total * 100;
+      const detalhe = g.cats.length > 1
+        ? ' — ' + g.cats.filter(c => l.porCat[c]).map(c => `${NOME_CATEGORIA[c]} ${l.porCat[c]}`).join(', ')
+        : '';
+      // Numero dentro do segmento so' quando cabe (>= 9%); senao fica na dica.
+      return `<i class="f-${g.est}" style="flex:${n} 1 0" title="${NOME_SETOR[l.s]} · ${g.nome}: ${n} (${pct(n, l.total)})${esc(detalhe)}">${w >= 9 ? n : ''}</i>`;
+    }).join('');
+    const apto = l.porCat.oper || 0;
+    return `<div class="sbar">
+      <div class="sbar-top"><span class="sbar-nome">${NOME_SETOR[l.s]}</span>
+        <span class="sbar-tot">${l.total} <small>· ${pct(apto, l.total)} apto A</small></span></div>
+      <div class="sbar-trilho" role="img" aria-label="${NOME_SETOR[l.s]}: ${GRUPOS_SETOR.map(g => g.nome + ' ' + g.cats.reduce((a, c) => a + (l.porCat[c] || 0), 0)).join(', ')}">${segs}</div>
+    </div>`;
+  }).join('') + `<div class="viz-leg">${GRUPOS_SETOR.map(g =>
+      `<span><i class="f-${g.est}"></i>${g.nome}${g.det ? ` <small>(${g.det})</small>` : ''}</span>`).join('')}</div>`;
 
-  const ciaData = buildSetorData('CIA');
-  document.getElementById('ciaTotal').textContent = ciaData.total;
-  if (chartCIA) chartCIA.destroy();
-  chartCIA = new Chart(document.getElementById('chartCIA'), {
-    type: 'doughnut',
-    data: { labels: ciaData.labels, datasets: [{ data: ciaData.values, backgroundColor: ciaData.colors, borderColor: '#1a2940', borderWidth: 3 }] },
-    options: { responsive: true, maintainAspectRatio: true, aspectRatio: 1.5, plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0', padding: 12, font: { size: 11 } } } } }
-  });
+  // ── 3. Posto / graduação: oficiais e praças na mesma escala ──
+  const conhecidos = new Set(GRAD_ORDER);
+  const maxP = Math.max(1, ...Object.values(m.patentes));
+  const linhaPosto = (g, n) => barraH({ rotulo: g.replace(/ PM$/, ''), valor: n, largura: n / maxP * 100, est: 'acc',
+                                        dica: `${g}: ${n} (${pct(n, m.t)} do efetivo)` });
+  const ehOf = g => OFICIAIS_KW.some(k => g.includes(k));
+  const ofi = GRAD_ORDER.filter(g => ehOf(g) && m.patentes[g]);
+  const pra = GRAD_ORDER.filter(g => !ehOf(g) && m.patentes[g]);
+  const outras = Object.keys(m.patentes).filter(g => !conhecidos.has(g));
+  const nOutras = outras.reduce((a, g) => a + m.patentes[g], 0);
+  document.getElementById('vizPatente').innerHTML = `
+    <div class="viz-col"><h4>Oficiais <small>${m.ofAtivos}</small></h4>${ofi.map(g => linhaPosto(g, m.patentes[g])).join('') || '<div class="viz-nota">Nenhum</div>'}</div>
+    <div class="viz-col"><h4>Praças <small>${m.pr}</small></h4>${pra.map(g => linhaPosto(g, m.patentes[g])).join('')}
+      ${nOutras ? barraH({ rotulo: 'Não reconhecido', valor: nOutras, largura: nOutras / maxP * 100, est: 'warn',
+                           dica: 'Posto/graduação que o dashboard não reconhece: ' + outras.map(g => g || '(em branco)').join(', ') }) : ''}
+    </div>`;
 }
 
 // ─── TAGS ─────────────────────────────────────────────────────────────────────
+// Cor pelo estado (mesma regra dos cards), texto sempre escapado: vem da planilha.
 function sitTag(sit) {
-  const s = (sit||'').toUpperCase();
-  if (s === 'APTO CAT A')     return `<span class="tag tag-green">${sit}</span>`;
-  if (s.includes('CAT B'))    return `<span class="tag tag-yellow">${sit}</span>`;
-  if (s.includes('CAT C'))    return `<span class="tag tag-yellow">${sit}</span>`;
-  if (s.includes('LTS'))      return `<span class="tag tag-red">${sit}</span>`;
-  if (s.includes('AGUARDANDO'))return `<span class="tag tag-purple">${sit}</span>`;
-  return `<span class="tag tag-blue">${sit}</span>`;
+  const s = normCampo(sit);
+  if (!s) return '<span class="tag tag-neutro">—</span>';
+  const apt = letraAptidao(s);
+  let cls = 'tag-neutro';                        // irreconhecivel: aparece em Pendencias
+  if (apt === 'A')                      cls = 'tag-green';
+  else if (apt === 'B' || apt === 'C')  cls = 'tag-yellow';
+  else if (/LTS|AGUARDANDO|REFORMA/.test(s) || OUTROS_AFAST_RX.test(s)) cls = 'tag-red';
+  return `<span class="tag ${cls}">${esc(sit)}</span>`;
 }
 
 function categoriaTag(m) {
-  const cat = getCategoria(m);
   const map = {
-    oper: '', ferias: '<span class="tag" style="background:#00BCD420;color:#00BCD4">FÉRIAS</span>',
+    oper: '', ferias: '<span class="tag tag-neutro">FÉRIAS</span>',
     aptob:'<span class="tag tag-yellow">APTO B</span>', aptoc:'<span class="tag tag-yellow">APTO C</span>',
-    lts:  '<span class="tag tag-red">LTS</span>', agrr:'<span class="tag tag-purple">Ag. R.R</span>',
-    reforma:'<span class="tag" style="background:#79554820;color:#A1887F">REFORMA</span>',
-    tempocerto:'<span class="tag" style="background:#8D6E6320;color:#8D6E63">T. CERTO</span>'
+    lts:  '<span class="tag tag-red">LTS</span>', outros:'<span class="tag tag-red">AFASTADO</span>',
+    agrr:'<span class="tag tag-red">Ag. R.R</span>', reforma:'<span class="tag tag-red">REFORMA</span>',
+    tempocerto:'<span class="tag tag-neutro">T. CERTO</span>'
   };
-  return map[cat] || '';
+  return map[getCategoria(m)] || '';
+}
+
+function equipTag(v) {
+  if (equipOk(v))  return '<span class="tag tag-green">SIM</span>';
+  if (equipNao(v)) return '<span class="tag tag-red">NÃO</span>';
+  const t = String(v || '').trim();
+  return t ? `<span class="tag tag-neutro" title="Valor inválido na planilha">${esc(t)}</span>` : '—';
 }
 
 // ─── CONSTRUIR TABELA DE GRADUAÇÃO ───────────────────────────────────────────
-function buildGradHTML(list, grad, cssClass, showStatusCol) {
+// maxGrupo: o maior grupo da secao. O medidor era sempre 100% -- enfeite; agora
+// mostra o tamanho de cada graduacao em relacao as outras da mesma secao.
+function buildGradHTML(list, grad, cssClass, showStatusCol, maxGrupo) {
   const searching = hasSearch();
   const rows = list.map((m, i) => `<tr>
-
-    <td style="padding:4px 6px"><img class="foto-avatar foto-row" data-rg="${(m.rg||'').replace(/"/g,'')}" src="${PLACEHOLDER_SVG}" alt=""></td>
-    <td style="color:#667788">${i+1}</td>
-    <td>${m.rg||'—'}</td>
-    <td style="font-weight:500">${m.nome}${m.abono ? '<span class="tag-abono">ABONO</span>' : ''}</td>
-    <td>${m.cia||'—'}</td>
-    <td>${m.funcao||'—'}</td>
+    <td style="padding:4px 6px"><img class="foto-avatar foto-row" data-rg="${esc(String(m.rg||'').replace(/"/g,''))}" src="${PLACEHOLDER_SVG}" alt=""></td>
+    <td class="num">${i+1}</td>
+    <td>${esc(m.rg||'—')}</td>
+    <td style="font-weight:500">${esc(m.nome)}${String(m.abono||'').trim() ? '<span class="tag-abono">ABONO</span>' : ''}</td>
+    <td>${esc(m.cia||'—')}</td>
+    <td>${esc(m.funcao||'—')}</td>
     <td>${sitTag(m.sit)}${showStatusCol ? ' ' + categoriaTag(m) : ''}</td>
-    <td>${m.arma === 'SIM' ? '<span class="tag tag-green">SIM</span>' : m.arma === 'NÃO' ? '<span class="tag tag-red">NÃO</span>' : '—'}</td>
+    <td>${equipTag(m.arma)}</td>
     ${isAdmin ? `<td><button class="btn btn-outline" onclick="editarMilitar(${m._idx})">Abono/Obs</button></td>` : ''}
   </tr>`).join('');
+  const largura = Math.max(4, list.length / Math.max(1, maxGrupo || list.length) * 100);
 
   return `<div class="grad-bar ${cssClass}">
     <div class="grad-bar-header${searching ? ' active' : ''}" onclick="toggleGrad(this)" role="button" tabindex="0" aria-expanded="${searching ? 'true' : 'false'}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleGrad(this);}">
       <div class="grad-bar-left">
-        <span class="grad-bar-icon">&#9654;</span>
-        <span class="grad-bar-rank">${grad}</span>
+        <span class="grad-bar-icon" aria-hidden="true">&#9654;</span>
+        <span class="grad-bar-rank">${esc(grad || 'SEM POSTO/GRADUAÇÃO')}</span>
       </div>
-      <div class="grad-bar-meter"><div class="grad-bar-fill" style="width:100%"></div></div>
+      <div class="grad-bar-meter" aria-hidden="true"><div class="grad-bar-fill" style="width:${largura.toFixed(1)}%"></div></div>
       <span class="grad-bar-count">${list.length}</span>
     </div>
     <div class="grad-bar-body${searching ? ' open' : ''}">
@@ -1450,6 +1554,16 @@ function byGrad(list) {
   return groups;
 }
 
+// Graduacoes na ordem da hierarquia -- e as que o dashboard nao conhece no fim.
+// Antes so' entravam as de GRAD_ORDER: um "1SGT PM" sem espaco (ou um posto em
+// branco) contava nos cards e sumia das listas, sem aviso.
+function gruposOrdenados(groups) {
+  const conhecidas = GRAD_ORDER.filter(g => groups[g] && groups[g].length);
+  const resto = Object.keys(groups).filter(g => !GRAD_ORDER.includes(g) && groups[g].length)
+    .sort((a, b) => ((ORDEM_PATENTE[a] || 99) - (ORDEM_PATENTE[b] || 99)) || a.localeCompare(b));
+  return conhecidas.concat(resto).map(g => [g, groups[g]]);
+}
+
 function sortList(list) {
   return list.slice().sort((a, b) => {
     const oa = ORDEM_PATENTE[(a.gh||'').trim().toUpperCase()] || 99;
@@ -1466,11 +1580,9 @@ function renderGrupoSection(containerId, secId, rawList, cssClass) {
   const list      = sortList(rawList);
   if (list.length === 0) { sec.style.display = 'none'; container.innerHTML = ''; return; }
   sec.style.display = 'block';
-  const groups = byGrad(list);
-  container.innerHTML = GRAD_ORDER
-    .filter(g => groups[g] && groups[g].length > 0)
-    .map(g => buildGradHTML(groups[g], g, cssClass, true))
-    .join('');
+  const grupos = gruposOrdenados(byGrad(list));
+  const maior  = Math.max(...grupos.map(([, l]) => l.length));
+  container.innerHTML = grupos.map(([g, l]) => buildGradHTML(l, g, cssClass, true, maior)).join('');
 }
 
 // Renderiza seção de STATUS (separa CIA vs CCSV com sub-label)
@@ -1483,19 +1595,20 @@ function renderStatusSection(containerId, secId, rawList, cssClass) {
   const listCIA  = sortList(rawList.filter(m => m.cia !== 'CCSV'));
   const listCCSV = sortList(rawList.filter(m => m.cia === 'CCSV'));
   const hasBoth  = listCIA.length > 0 && listCCSV.length > 0;
+  const gCIA  = gruposOrdenados(byGrad(listCIA));
+  const gCCSV = gruposOrdenados(byGrad(listCCSV));
+  const maior = Math.max(1, ...gCIA.concat(gCCSV).map(([, l]) => l.length));
 
   let html = '';
 
   if (listCIA.length > 0) {
-    if (hasBoth) html += `<div class="subsec-label" style="color:#2196F3;border-color:#2196F3">CIA / Oficiais (${listCIA.length})</div>`;
-    const groups = byGrad(listCIA);
-    html += GRAD_ORDER.filter(g => groups[g]).map(g => buildGradHTML(groups[g], g, cssClass, false)).join('');
+    if (hasBoth) html += `<div class="subsec-label">CIA / Oficiais (${listCIA.length})</div>`;
+    html += gCIA.map(([g, l]) => buildGradHTML(l, g, cssClass, false, maior)).join('');
   }
 
   if (listCCSV.length > 0) {
-    if (hasBoth) html += `<div class="subsec-label" style="color:#26C6DA;border-color:#26C6DA;margin-top:14px">CCSV (${listCCSV.length})</div>`;
-    const groups = byGrad(listCCSV);
-    html += GRAD_ORDER.filter(g => groups[g]).map(g => buildGradHTML(groups[g], g, cssClass + ' grad-ccsv', false)).join('');
+    if (hasBoth) html += `<div class="subsec-label" style="margin-top:14px">CCSV (${listCCSV.length})</div>`;
+    html += gCCSV.map(([g, l]) => buildGradHTML(l, g, cssClass, false, maior)).join('');
   }
 
   container.innerHTML = html;
@@ -1562,6 +1675,7 @@ function renderGradBars() {
   renderStatusSection('gradBarsAptoB',   'secAptoB',   filtered.filter(m => getCategoria(m) === 'aptob'),     'grad-aptob');
   renderStatusSection('gradBarsAptoC',   'secAptoC',   filtered.filter(m => getCategoria(m) === 'aptoc'),     'grad-aptoc');
   renderStatusSection('gradBarsLTS',     'secLTS',     filtered.filter(m => getCategoria(m) === 'lts'),       'grad-lts');
+  renderStatusSection('gradBarsOutros',  'secOutros',  filtered.filter(m => getCategoria(m) === 'outros'),    'grad-outros');
   renderStatusSection('gradBarsAGRR',    'secAGRR',    filtered.filter(m => getCategoria(m) === 'agrr'),      'grad-agrr');
   renderStatusSection('gradBarsReforma', 'secReforma', filtered.filter(m => getCategoria(m) === 'reforma'),   'grad-reforma');
   renderStatusSection('gradBarsTC',      'secTC',      filtered.filter(m => getCategoria(m) === 'tempocerto'),'grad-tc');
@@ -1577,35 +1691,15 @@ function toggleGrad(header) {
   if (body.classList.contains('open')) loadFotosVisiveis(body);
 }
 
-function toggleGradAll(cb) {
-  const table = cb.closest('table');
-  table.querySelectorAll('.row-cb').forEach(c => c.checked = cb.checked);
-  updateSelection();
-}
-
-// ─── SELEÇÃO ─────────────────────────────────────────────────────────────────
-// A selecao em massa existia para excluir militares, o que agora e' feito
-// apenas pela planilha. Mantida como no-op porque refreshAll() ainda chama.
-function updateSelection() {}
-
 // ─── MODAL ────────────────────────────────────────────────────────────────────
-function openAddModal() {
-  editingIdx = -1;
-  document.getElementById('modalTitle').textContent = 'Adicionar Militar';
-  ['fGh','fCia','fRg','fNome','fFuncao','fId','fDe','fAte','fAbono','fObs'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('fSit').value   = 'APTO CAT A';
-  document.getElementById('fArma').value  = 'SIM';
-  document.getElementById('fColete').value= 'SIM';
-  _currentFoto   = null;
-  _removendoFoto = false;
-  const prev = document.getElementById('fotoPreview');
-  prev.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 110 110'%3E%3Ccircle cx='55' cy='55' r='55' fill='%231e3450'/%3E%3Ccircle cx='55' cy='42' r='18' fill='%23445566'/%3E%3Cellipse cx='55' cy='90' rx='30' ry='22' fill='%23445566'/%3E%3C/svg%3E";
-  document.getElementById('btnRemoverFoto').style.display = 'none';
-  document.getElementById('fFoto').value = '';
-  document.getElementById('modalOverlay').classList.add('active');
-}
+// Adicionar, excluir e "resetar" militares sairam da interface: o cadastro entra
+// e sai pela planilha EFETIVO 2025. O modal edita so' abono e observacao.
+const FOTO_VAZIA_MODAL = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 110 110'%3E%3Ccircle cx='55' cy='55' r='55' fill='%231e3450'/%3E%3Ccircle cx='55' cy='42' r='18' fill='%23445566'/%3E%3Cellipse cx='55' cy='90' rx='30' ry='22' fill='%23445566'/%3E%3C/svg%3E";
+
+// RG de quem esta aberto no modal. Era o indice no array -- mas a sincronizacao
+// roda a cada 10 min e a cada edicao da planilha, e reordena o array: com o
+// modal aberto, o abono ia parar em outro militar.
+let editingRg = '';
 
 // Os 12 campos que a planilha manda. O dashboard nunca escreve neles.
 const CAMPOS_DA_PLANILHA = ['fGh','fRg','fNome','fCia','fFuncao','fSit','fId','fArma','fColete','fDe','fAte'];
@@ -1622,8 +1716,9 @@ function travarCamposDaPlanilha() {
 }
 
 function editarMilitar(idx) {
-  editingIdx = idx;
   const m = efetivo[idx];
+  if (!m) return;
+  editingRg = normRg(m.rg);
   document.getElementById('modalTitle').textContent = 'Abono e Observação';
   document.getElementById('fGh').value     = m.gh || '';
   document.getElementById('fRg').value     = m.rg || '';
@@ -1645,7 +1740,7 @@ function editarMilitar(idx) {
 
   // Carregar foto existente
   const prev = document.getElementById('fotoPreview');
-  prev.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 110 110'%3E%3Ccircle cx='55' cy='55' r='55' fill='%231e3450'/%3E%3Ccircle cx='55' cy='42' r='18' fill='%23445566'/%3E%3Cellipse cx='55' cy='90' rx='30' ry='22' fill='%23445566'/%3E%3C/svg%3E";
+  prev.src = FOTO_VAZIA_MODAL;
   if (m.rg) {
     const key = fotoKey(m.rg);
     if (fotosCache[key]) {
@@ -1663,60 +1758,59 @@ function editarMilitar(idx) {
     }
   }
   travarCamposDaPlanilha();
-  document.getElementById('modalOverlay').classList.add('active');
+  abrirOverlay('modalOverlay');
 }
 
 function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('active');
+  fecharOverlay('modalOverlay');
+}
+
+// Grava abono/obs so' no registro deste militar, conferindo o RG dentro de uma
+// transacao. Antes o array /efetivo inteiro era regravado (na ordem local) e um
+// segundo salvamento feito enquanto o primeiro viajava era descartado em
+// silencio, com o toast de sucesso na tela.
+function salvarExtrasNoFirebase(rg, extras) {
+  const chave = chaveFirebasePorRg[rg];
+  if (chave == null) return Promise.reject(new Error('militar não encontrado no Firebase'));
+  return efetivoRef.child(chave).transaction(atual => {
+    if (atual === null) return null;          // cache vazio: o SDK repete com o valor do servidor
+    if (normRg(atual.rg) !== rg) return;      // outro militar nesta posicao: aborta
+    return Object.assign({}, atual, extras);
+  }).then(r => {
+    const v = r && r.snapshot ? r.snapshot.val() : null;
+    if (!r || !r.committed || !v || normRg(v.rg) !== rg)
+      throw new Error('a planilha mudou durante a edição. Abra o militar de novo e repita');
+  });
 }
 
 function salvarMilitar() {
-  const gh   = document.getElementById('fGh').value;
-  const nome = document.getElementById('fNome').value.trim().toUpperCase();
-  const cia  = document.getElementById('fCia').value;
-  if (!gh || !nome || !cia) { showToast('Preencha: Patente, Nome e Setor', 'error'); return; }
-
-  const mil = {
-    gh, nome, cia,
-    rg:     document.getElementById('fRg').value.trim(),
-    id:     document.getElementById('fId').value.trim(),
-    funcao: document.getElementById('fFuncao').value.trim().toUpperCase(),
-    sit:    document.getElementById('fSit').value,
-    arma:   document.getElementById('fArma').value,
-    colete: document.getElementById('fColete').value,
-    de:     document.getElementById('fDe').value,
-    ate:    document.getElementById('fAte').value,
-    abono:  document.getElementById('fAbono').value,
-    obs:    document.getElementById('fObs').value.trim(),
-    ferias: ''
-  };
-
-  if (editingIdx >= 0) {
-    // A planilha e' a fonte da verdade. Preservamos TUDO que veio dela e
-    // aplicamos apenas os dois campos que pertencem ao dashboard.
-    // Antes o registro era reconstruido do zero com 'ferias: ""', o que
-    // apagava as ferias vencidas de quem fosse editado -- e o texto dizia
-    // "atualizado com sucesso" enquanto isso.
-    efetivo[editingIdx] = Object.assign({}, efetivo[editingIdx], {
-      abono: mil.abono,
-      obs:   mil.obs
-    });
-    showToast(`${nome}: abono e observação atualizados`, 'success');
-  } else {
-    efetivo.push(mil);
-    showToast(`${nome} adicionado ao efetivo`, 'success');
+  const rg  = editingRg;
+  const mil = rg ? efetivo.find(x => normRg(x.rg) === rg) : null;
+  if (!mil) {
+    showToast('Militar não encontrado — a planilha pode ter mudado. Feche e abra a edição de novo.', 'error');
+    return;
   }
 
-  efetivo.sort((a, b) => {
-    const oa = ORDEM_PATENTE[(a.gh||'').trim().toUpperCase()] || 99;
-    const ob = ORDEM_PATENTE[(b.gh||'').trim().toUpperCase()] || 99;
-    if (oa !== ob) return oa - ob;
-    return (parseInt(a.rg)||999999) - (parseInt(b.rg)||999999);
-  });
+  const abono = document.getElementById('fAbono').value;
+  const obs   = document.getElementById('fObs').value.trim();
+  const nome  = mil.nome;
+  const mudancas = [];
+  if ((mil.abono || '') !== abono) mudancas.push(`Abono: <strong>${abono ? 'cadastrado' : 'removido'}</strong>`);
+  if ((mil.obs   || '') !== obs)   mudancas.push('Observação atualizada');
 
-  saveData();
+  // A planilha e' a fonte da verdade: so' os dois campos do dashboard mudam.
+  // O efetivo local nao e' tocado aqui -- o listener do Firebase traz o valor
+  // gravado (ou desfaz, se a gravacao falhar).
+  if (mudancas.length > 0 && isAdmin) {
+    _ecoDeGravacaoLocal = Date.now();
+    salvarExtrasNoFirebase(rg, { abono, obs })
+      .then(() => {
+        showToast(`${nome}: abono e observação atualizados`, 'success');
+        registrarLog('edit', `<strong>${nome}</strong> — ${mudancas.join(' · ')}`);
+      })
+      .catch(err => showToast('❌ Não foi salvo: ' + err.message, 'error'));
+  }
 
-  // Salvar foto ANTES do refreshAll para que o cache já esteja populado
   const rgParaFoto = mil.rg;
   if (rgParaFoto) {
     if (_currentFoto) {
@@ -1736,13 +1830,13 @@ function salvarMilitar() {
   // Após refresh, abrir automaticamente a barra do militar editado e mostrar a foto
   if (rgParaFoto && fotosCache[fotoKey(rgParaFoto)]) {
     requestAnimationFrame(() => {
-      const img = document.querySelector(`.foto-row[data-rg="${rgParaFoto}"]`);
+      const img = document.querySelector(`.foto-row[data-rg="${CSS.escape(rgParaFoto)}"]`);
       if (img) {
         const body   = img.closest('.grad-bar-body');
         const header = body ? body.previousElementSibling : null;
         if (body && !body.classList.contains('open')) {
           body.classList.add('open');
-          if (header) header.classList.add('active');
+          if (header) { header.classList.add('active'); header.setAttribute('aria-expanded', 'true'); }
         }
         if (body) loadFotosVisiveis(body);
         img.closest('.grad-bar') && img.closest('.grad-bar').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1751,51 +1845,21 @@ function salvarMilitar() {
   }
 }
 
-function excluirUm(idx) {
-  const m = efetivo[idx];
-  if (confirm(`Confirma exclusão de ${m.nome} do efetivo?`)) {
-    if (m.rg) deleteFoto(m.rg);
-    efetivo.splice(idx, 1);
-    saveData();
-    showToast(`${m.nome} excluído do efetivo`, 'info');
-    refreshAll();
-  }
-}
-
-function excluirSelecionados() {
-  const checked = [...document.querySelectorAll('.row-cb:checked')];
-  const idxs = checked.map(cb => parseInt(cb.dataset.idx)).sort((a, b) => b - a);
-  if (confirm(`Confirma exclusão de ${idxs.length} militar(es)?`)) {
-    idxs.forEach(i => { if (efetivo[i] && efetivo[i].rg) deleteFoto(efetivo[i].rg); efetivo.splice(i, 1); });
-    saveData();
-    showToast(`${idxs.length} militar(es) excluído(s)`, 'info');
-    document.getElementById('cbAll') && (document.getElementById('cbAll').checked = false);
-    refreshAll();
-  }
-}
-
-function resetarDados() {
-  if (confirm('Isso vai restaurar os dados originais da planilha. Todas as alterações serão perdidas. Continuar?')) {
-    efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
-    saveData(); showToast('Dados restaurados ao original', 'info'); refreshAll();
-  }
-}
-
 // ─── EXPORTAR ─────────────────────────────────────────────────────────────────
 function exportarCSV() {
   const headers = ['Patente','RG','ID Funcional','Nome','Setor','Função','Sit. Sanitária','Arma','Colete','De','Até','Em Abono Desde','Observação'];
   const rows = efetivo.map(m => [m.gh,m.rg,m.id,m.nome,m.cia,m.funcao,m.sit,m.arma,m.colete,m.de,m.ate,m.abono,m.obs]
-    .map(v => `"${(v||'').replace(/"/g,'""')}"`).join(','));
+    .map(v => `"${String(v == null ? '' : v).replace(/"/g,'""')}"`).join(','));
   const csv = [headers.join(','), ...rows].join('\n');
   const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `efetivo_bepe_${new Date().toISOString().slice(0,10)}.csv`;
+  const a = document.createElement('a'); a.href = url; a.download = `efetivo_bepe_${hojeLocalISO()}.csv`;
   a.click(); URL.revokeObjectURL(url);
   showToast('CSV exportado com sucesso', 'success');
 }
 
 function exportarExcel() {
-  const catMap = {oper:'Apto A',ferias:'Férias',aptob:'Apto B',aptoc:'Apto C',lts:'LTS',agrr:'Ag. R.R',reforma:'Reforma',tempocerto:'Tempo Certo'};
+  const catMap = {oper:'Apto A',ferias:'Férias',aptob:'Apto B',aptoc:'Apto C',lts:'LTS',outros:'Outros afastamentos',agrr:'Ag. R.R',reforma:'Reforma',tempocerto:'Tempo Certo'};
   const headers = ['Patente','RG','ID Funcional','Nome','Setor','Função','Sit. Sanitária','Categoria','Arma','Colete','De','Até','Em Abono Desde','Observação'];
   const data = efetivo.map(m => [m.gh,m.rg,m.id,m.nome,m.cia,m.funcao,m.sit,catMap[getCategoria(m)]||'',m.arma,m.colete,m.de,m.ate,m.abono,m.obs]);
   const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
@@ -1809,14 +1873,19 @@ function exportarExcel() {
     ['Apto A Tropa', met.aptoATropa],['CIA Outros', met.aptoAOutros],['CCSV Apto A', met.aptoACCSV],
     ['Abono Permanência', met.abono],
     ['Apto Cat B', met.aptoB],['Apto Cat C', met.aptoC],
-    ['Afastados (LTS+Ag.RR+Ref)', met.lts+met.rr+met.reforma],
+    ['Afastados (LTS+Outros+Ag.RR+Ref)', met.lts+met.outros+met.rr+met.reforma],
+    ['  Outros afastamentos (L.E, curso, baixado…)', met.outros],
     ['De Férias', met.fer],['Tempo Certo (excluído do total)', met.tc],[''],
-    ['Operacionalidade', met.oper+'%'],[''],['Gerado em', new Date().toLocaleString('pt-BR')]
+    ['Operacionalidade', met.oper+'%'],
+    ['Pronto (Apto A com arma e colete)', met.prontoRua],
+    ['Com CPPD', met.comCppd],[''],
+    ['Gerado em', new Date().toLocaleString('pt-BR')],
+    ['Planilha sincronizada em', ultimaSyncTexto()]
   ];
   const ws2 = XLSX.utils.aoa_to_sheet(resumo);
-  ws2['!cols'] = [{wch:32},{wch:15}];
+  ws2['!cols'] = [{wch:40},{wch:22}];
   XLSX.utils.book_append_sheet(wb, ws2, 'Resumo');
-  XLSX.writeFile(wb, `efetivo_bepe_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `efetivo_bepe_${hojeLocalISO()}.xlsx`);
   showToast('Excel exportado com sucesso', 'success');
 }
 
@@ -1827,9 +1896,9 @@ function abrirCompartilhar() {
     : window.location.origin + window.location.pathname;
   document.getElementById('linkView').value  = base;
   document.getElementById('linkAdmin').value = base + '?acesso=admin';
-  document.getElementById('shareOverlay').classList.add('active');
+  abrirOverlay('shareOverlay');
 }
-function fecharCompartilhar() { document.getElementById('shareOverlay').classList.remove('active'); }
+function fecharCompartilhar() { fecharOverlay('shareOverlay'); }
 function copiarLink(inputId) {
   const input = document.getElementById(inputId);
   navigator.clipboard.writeText(input.value).then(() => showToast('Link copiado!', 'success'))
@@ -1843,6 +1912,42 @@ function showToast(msg, type) {
   t.className = 'toast ' + type + ' show';
   setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// ─── OVERLAYS ─────────────────────────────────────────────────────────────────
+// Esc fecha o que estiver por cima. O foco entra no painel ao abrir e volta
+// para quem o abriu ao fechar -- teclado e leitor de tela nao ficam perdidos
+// atras de uma camada escura.
+const _focoAntes = {};
+
+function abrirOverlay(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!el.classList.contains('active')) _focoAntes[id] = document.activeElement;
+  el.classList.add('active');
+  const alvo = el.querySelector('.close-x, .close');
+  if (alvo) setTimeout(() => alvo.focus({ preventScroll: true }), 30);
+}
+
+function fecharOverlay(id) {
+  const el = document.getElementById(id);
+  if (!el || !el.classList.contains('active')) return;
+  el.classList.remove('active');
+  const volta = _focoAntes[id];
+  delete _focoAntes[id];
+  if (volta && volta.focus && document.contains(volta)) volta.focus({ preventScroll: true });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const abertos = document.querySelectorAll('.modal-overlay.active, .tool-overlay.active');
+  if (abertos.length) { e.preventDefault(); fecharOverlay(abertos[abertos.length - 1].id); return; }
+  const painel = document.getElementById('alertaPanel');
+  if (painel && painel.classList.contains('show')) {
+    painel.classList.remove('show');
+    const sino = document.getElementById('alertaBell');
+    if (sino) sino.focus({ preventScroll: true });
+  }
+});
 
 // ─── NAVEGAÇÃO ────────────────────────────────────────────────────────────────
 function irPara(id) {
@@ -1859,7 +1964,7 @@ function expandirSecao(sec) {
   if (!sec || !sec.classList || !sec.classList.contains('grad-section')) return;
   const h3   = sec.querySelector('h3');
   const wrap = sec.querySelector('.grad-section-content');
-  if (h3)   h3.classList.remove('sec-collapsed');
+  if (h3)   { h3.classList.remove('sec-collapsed'); h3.setAttribute('aria-expanded', 'true'); }
   if (wrap) wrap.classList.remove('collapsed');
 }
 
@@ -1918,11 +2023,9 @@ function onBuscar() {
 function refreshAll() {
   const m = calcMetrics();
   renderCards(m);
-  renderCharts(m);
-  renderSetorCharts();
+  renderViz(m);
   renderGradBars();
   renderAlertasLTS();
-  updateSelection();
   // Carregar fotos de barras que já estão abertas (ex: busca ativa)
   requestAnimationFrame(() => {
     document.querySelectorAll('.grad-bar-body.open').forEach(body => loadFotosVisiveis(body));
@@ -1984,6 +2087,7 @@ function renderAlertasLTS() {
   badge.textContent = total;
   if (total === 0) { bell.classList.add('empty'); }
   else             { bell.classList.remove('empty'); }
+  bell.setAttribute('aria-label', total ? `Abrir alertas de LTS (${total})` : 'Alertas de LTS: nenhum nos próximos 30 dias');
 
   const fmtDt = d => d.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }).toUpperCase();
   const dataDe = d => `Vence ${fmtDt(d)}`;
@@ -1992,10 +2096,11 @@ function renderAlertasLTS() {
     return `<div class="alerta-group">
       <div class="alerta-group-title ${classe}">${titulo} (${lista.length})</div>
       ${lista.map(m => `
-        <div class="alerta-mil" onclick="irParaMilitar('${m.rg}')">
+        <div class="alerta-mil" data-rg="${esc(m.rg)}" onclick="irParaMilitar(this.dataset.rg)"
+             role="button" tabindex="0" onkeydown="if(event.key==='Enter'){irParaMilitar(this.dataset.rg)}">
           <div class="mil-info">
-            <div class="mil-nome">${m.gh} ${m.nome}</div>
-            <div class="mil-meta">${m.cia} · ${m.funcao || 'LTS'}</div>
+            <div class="mil-nome">${esc(m.gh)} ${esc(m.nome)}</div>
+            <div class="mil-meta">${esc(m.cia)} · ${esc(m.funcao || 'LTS')}</div>
           </div>
           <span class="mil-dias ${classe}">${m._dias < 0 ? Math.abs(m._dias)+' dias vencido' : m._dias === 0 ? 'VENCE HOJE' : dataDe(m._data)}</span>
         </div>
@@ -2037,8 +2142,8 @@ function irParaMilitar(rg) {
   setTimeout(() => {
     // Encontrar a foto do militar DENTRO da seção LTS — ele também aparece
     // na seção do seu grupo (Tropa/CCSV), que vem antes no DOM
-    const img = sec.querySelector(`.foto-row[data-rg="${rg}"]`)
-             || document.querySelector(`.foto-row[data-rg="${rg}"]`);
+    const sel = `.foto-row[data-rg="${CSS.escape(String(rg))}"]`;
+    const img = sec.querySelector(sel) || document.querySelector(sel);
     if (!img) {
       sec.scrollIntoView({ behavior:'smooth', block:'start' });
       return;
@@ -2089,7 +2194,7 @@ function getEstadoSecoes() {
 }
 
 function setEstadoSecoes(estado) {
-  localStorage.setItem(SEC_STATE_KEY, JSON.stringify(estado));
+  try { localStorage.setItem(SEC_STATE_KEY, JSON.stringify(estado)); } catch (e) {}
 }
 
 function setupSecoesColapsaveis() {
@@ -2111,15 +2216,22 @@ function setupSecoesColapsaveis() {
 
     // Preparar o h3 com chevron e contagem
     const textoOriginal = h3.innerHTML;
-    h3.innerHTML = `<span class="sec-chevron">▼</span><span>${textoOriginal}</span><span class="sec-pill"></span>`;
+    h3.innerHTML = `<span class="sec-chevron" aria-hidden="true">▼</span><span>${textoOriginal}</span><span class="sec-pill"></span>`;
+    // Cabecalho clicavel tambem pelo teclado, anunciando se esta aberto.
+    h3.setAttribute('role', 'button');
+    h3.tabIndex = 0;
 
     h3.addEventListener('click', () => {
       const e = getEstadoSecoes();
       const id = sec.id || 'sec_' + Math.random();
       const colapsada = h3.classList.toggle('sec-collapsed');
       wrap.classList.toggle('collapsed', colapsada);
+      h3.setAttribute('aria-expanded', colapsada ? 'false' : 'true');
       e[id] = colapsada;
       setEstadoSecoes(e);
+    });
+    h3.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); h3.click(); }
     });
 
     // Restaurar estado salvo (mas se estiver buscando, força aberto)
@@ -2127,6 +2239,7 @@ function setupSecoesColapsaveis() {
       h3.classList.add('sec-collapsed');
       wrap.classList.add('collapsed');
     }
+    h3.setAttribute('aria-expanded', h3.classList.contains('sec-collapsed') ? 'false' : 'true');
   });
 }
 
@@ -2146,6 +2259,7 @@ function atualizarPillsSecoes() {
       const wrap = sec.querySelector('.grad-section-content');
       if (wrap) wrap.classList.remove('collapsed');
       h3.classList.remove('sec-collapsed');
+      h3.setAttribute('aria-expanded', 'true');
     }
   });
 }
@@ -2311,11 +2425,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { renderCharts(calcMetrics()); renderSetorCharts(); }, 250);
-});
 
 document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 document.getElementById('shareOverlay').addEventListener('click', function(e) { if (e.target === this) fecharCompartilhar(); });
@@ -2324,32 +2433,40 @@ document.getElementById('shareOverlay').addEventListener('click', function(e) { 
 //  FERRAMENTAS: TENDÊNCIA · ARMAMENTO · LOG · BOLETIM
 // ═══════════════════════════════════════════════════════════════════════════
 
-const HISTORICO_REF = db.ref('historico');
-const LOG_REF       = db.ref('logs');
-
-function fecharTool(id) { document.getElementById(id).classList.remove('active'); }
-['tendenciaOverlay','armamentoOverlay','logOverlay','boletimOverlay'].forEach(id => {
+function fecharTool(id) { fecharOverlay(id); }
+['tendenciaOverlay','armamentoOverlay','logOverlay','boletimOverlay','pendenciasOverlay'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e) {
     if (e.target === this) fecharTool(id);
   });
 });
 
 // ─── SNAPSHOT DIÁRIO (para tendência) ────────────────────────────────────────
-function gravarSnapshotDiario() {
-  const hoje = new Date().toISOString().slice(0,10);
+function snapshotAtual() {
   const m = calcMetrics();
-  const snap = {
-    data: hoje,
+  return {
+    data: hojeLocalISO(),
     total: m.t,
     aptoA: m.aptoA, aptoB: m.aptoB, aptoC: m.aptoC,
-    lts: m.lts, rr: m.rr, reforma: m.reforma, fer: m.fer, tc: m.tc,
+    lts: m.lts, outros: m.outros, rr: m.rr, reforma: m.reforma, fer: m.fer, tc: m.tc,
     abono: m.abono,
-    armaSim: efetivo.filter(x => x.arma === 'SIM').length,
-    coleteSim: efetivo.filter(x => x.colete === 'SIM').length,
+    armaSim: efetivo.filter(x => equipOk(x.arma)).length,
+    coleteSim: efetivo.filter(x => equipOk(x.colete)).length,
+    pronto: m.prontoRua,
+    comCppd: m.comCppd,
     operacionalidade: parseFloat(m.oper),
     ts: Date.now()
   };
-  HISTORICO_REF.child(hoje).set(snap).catch(()=>{});
+}
+
+// So' grava com o dado REAL do Firebase. Antes rodava 4s depois de abrir a
+// pagina com o que houvesse na memoria: numa conexao lenta, a copia local
+// (a semente de maio) virava o retrato do dia e a Tendencia ganhava um degrau
+// falso. Chamado a cada carga/atualizacao do efetivo, entao o retrato do dia
+// fica com o ultimo estado visto.
+function gravarSnapshotDiario() {
+  if (!dadosDoFirebase) return Promise.resolve(null);
+  const snap = snapshotAtual();
+  return HISTORICO_REF.child(snap.data).set(snap).then(() => snap).catch(() => null);
 }
 
 // ─── LOG DE ALTERAÇÕES ───────────────────────────────────────────────────────
@@ -2368,33 +2485,51 @@ function registrarLog(tipo, msg, detalhes) {
 
 // ─── TENDÊNCIA ───────────────────────────────────────────────────────────────
 let chartTendencia = null;
+let chartTendenciaTotal = null;
 let chartAfastMensalObj = null;
 
 function abrirTendencia() {
-  document.getElementById('tendenciaOverlay').classList.add('active');
+  abrirOverlay('tendenciaOverlay');
   carregarTendencia();
 }
+
+// A analise mensal precisa de meses de historico. Com limitToLast(30) ela nunca
+// passava de dois meses, e a leitura de tendencia dizia sempre "sem dados".
+const DIAS_HISTORICO = 400;
+// O grafico diario mostra so' o fim da serie: 400 pontos num eixo viram borrao.
+const DIAS_GRAFICO   = 90;
 
 function carregarTendencia() {
   const body = document.getElementById('tendenciaBody');
   body.innerHTML = '<div class="tend-empty"><span class="ico">⏳</span>Carregando histórico...</div>';
-  HISTORICO_REF.orderByKey().limitToLast(30).once('value').then(snap => {
-    const dados = snap.val();
-    if (!dados || Object.keys(dados).length < 2) {
+  HISTORICO_REF.orderByKey().limitToLast(DIAS_HISTORICO).once('value').then(snap => {
+    const dados = snap.val() || {};
+    let arr = Object.entries(dados)
+      .filter(([, v]) => v && typeof v === 'object')
+      .map(([k, v]) => ({ ...v, data: String(v.data || k), _key: k }));
+    // Hoje vem do dado vivo, igual aos cards. O retrato gravado pode ter horas
+    // -- e, se o Firebase recusar a escrita, nem existir.
+    if (dadosDoFirebase) {
+      const hoje = snapshotAtual();
+      arr = arr.filter(s => s.data !== hoje.data);
+      arr.push(hoje);
+      gravarSnapshotDiario();
+    }
+    arr.sort((a, b) => a.data.localeCompare(b.data));
+    if (arr.length < 2) {
       body.innerHTML = `<div class="tend-empty">
         <span class="ico">📊</span>
-        <div style="font-size:.9rem;color:#e0e0e0;margin-bottom:6px">Ainda não há histórico suficiente</div>
-        <div style="font-size:.78rem">O sistema começou a gravar snapshots diários hoje.<br>Volte amanhã para ver a evolução!</div>
-        <div style="margin-top:14px;font-size:.72rem;color:#667788">Snapshot atual já registrado ✓</div>
+        <div style="font-size:.9rem;color:var(--ink);margin-bottom:6px">Ainda não há histórico suficiente</div>
+        <div style="font-size:.78rem">O dashboard grava um retrato do efetivo por dia.<br>Volte amanhã para ver a evolução.</div>
+        <div style="margin-top:14px;font-size:.72rem;color:var(--ink-faint)">${dadosDoFirebase
+          ? 'Retrato de hoje registrado ✓'
+          : 'Aguardando os dados do Firebase para registrar o retrato de hoje.'}</div>
       </div>`;
-      gravarSnapshotDiario();
       return;
     }
-    const arr = Object.entries(dados).map(([k,v]) => ({...v, _key: k})).sort((a,b) => a.data.localeCompare(b.data));
     renderTendencia(arr);
-    gravarSnapshotDiario();
   }).catch(err => {
-    body.innerHTML = `<div class="tend-empty"><span class="ico">❌</span>Erro: ${err.message}</div>`;
+    body.innerHTML = `<div class="tend-empty"><span class="ico">❌</span>Erro: ${esc(err.message)}</div>`;
   });
 }
 
@@ -2412,37 +2547,50 @@ function agregarPorMes(arr) {
 function renderTendencia(arr) {
   const body = document.getElementById('tendenciaBody');
   // Sanitizar snapshots: campos numéricos podem ter sido gravados como string
-  // por versões anteriores — coagir tudo para número evita quebrar .toFixed()
+  // por versões anteriores — coagir tudo para número evita quebrar .toFixed().
+  // 'outros' so' existe nos retratos a partir desta versao; antes era zero
+  // porque essas pessoas eram contadas como Apto A.
+  // Primeiro retrato que ja' separa os outros afastamentos: dali para tras,
+  // licenca especial, curso e baixado estavam somados ao Apto A.
+  const inicioRegraOutros = (arr.find(s => s.outros !== undefined) || {}).data || null;
+  const temRegraAntiga = arr.some(s => s.outros === undefined);
   arr = arr.map(s => ({
     ...s,
+    _semOutros: s.outros === undefined,
     total: +s.total || 0, aptoA: +s.aptoA || 0, aptoB: +s.aptoB || 0, aptoC: +s.aptoC || 0,
-    lts: +s.lts || 0, rr: +s.rr || 0, reforma: +s.reforma || 0,
+    lts: +s.lts || 0, outros: +s.outros || 0, rr: +s.rr || 0, reforma: +s.reforma || 0,
     fer: +s.fer || 0, tc: +s.tc || 0, abono: +s.abono || 0,
     operacionalidade: +s.operacionalidade || 0
   }));
+  const afastDe = s => s.lts + s.outros + s.rr + s.reforma;
   const atual = arr[arr.length-1];
   const prev  = arr.length > 1 ? arr[arr.length-2] : null;
-  const diff = (a,b,casas=0) => {
+  const dataCurta = iso => new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+
+  // Seta + cor pelo SIGNIFICADO da variacao: afastados subindo e' ruim, nao
+  // "verde porque subiu". Efetivo e abono nao tem lado bom -- ficam neutros.
+  const diff = (a, b, bomQuando, unidade) => {
     if (!prev) return '<span class="tend-eq">— início</span>';
     const d = a - b;
-    if (Math.abs(d) < 0.05) return '<span class="tend-eq">→ Estável</span>';
-    return d > 0
-      ? `<span class="tend-up">▲ +${d.toFixed(casas)}${casas?'%':''}</span>`
-      : `<span class="tend-down">▼ ${d.toFixed(casas)}${casas?'%':''}</span>`;
+    const vs = ` <span class="tend-vs">vs ${dataCurta(prev.data)}</span>`;
+    if (Math.abs(d) < 0.05) return '<span class="tend-eq">→ estável</span>' + vs;
+    const txt = (d > 0 ? '▲ +' : '▼ ') + (unidade === 'pp' ? d.toFixed(1) + ' p.p.' : Math.round(d));
+    const bom = bomQuando === 'sobe' ? d > 0 : bomQuando === 'desce' ? d < 0 : null;
+    const cls = bom === null ? 'tend-eq' : bom ? 'tend-up' : 'tend-down';
+    return `<span class="${cls}">${txt}</span>` + vs;
   };
 
-  const labels = arr.map(x => {
-    const d = new Date(x.data + 'T12:00:00');
-    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-  });
-  const opData = arr.map(x => x.operacionalidade);
-  const totalData = arr.map(x => x.total);
+  // Grafico diario: so' o fim da serie
+  const diario = arr.slice(-DIAS_GRAFICO);
+  const labels = diario.map(x => dataCurta(x.data));
+  const opData = diario.map(x => x.operacionalidade);
+  const totalData = diario.map(x => x.total);
 
   // ── Agregação MENSAL para análise de afastados ──
   const mensal = agregarPorMes(arr);
   const enriched = mensal.map((d, i) => {
-    const afast = d.lts + d.rr + d.reforma;
-    const prevA = i > 0 ? mensal[i-1].lts + mensal[i-1].rr + mensal[i-1].reforma : null;
+    const afast = afastDe(d);
+    const prevA = i > 0 ? afastDe(mensal[i-1]) : null;
     const varAbs = prevA !== null ? afast - prevA : 0;
     const varPct = prevA !== null && prevA > 0 ? (varAbs / prevA * 100) : 0;
     let status;
@@ -2458,8 +2606,11 @@ function renderTendencia(arr) {
     return dt.toLocaleDateString('pt-BR', {month:'short', year:'2-digit'}).replace('.','').replace(' de ','/');
   });
   const afastData = enriched.map(d => d.afast);
-  const corPonto = enriched.map(d => d.status === 'pos' ? '#00e676' : d.status === 'neg' ? '#ff4444' : '#7a9bbe');
-  const corBorda = enriched.map(d => d.status === 'pos' ? '#00c853' : d.status === 'neg' ? '#c62828' : '#3d5c7a');
+  const tok = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+  const C = { ok: tok('--ok'), warn: tok('--warn'), crit: tok('--crit'), acc: tok('--acc'),
+              ink: tok('--ink'), dim: tok('--ink-dim'), faint: tok('--ink-faint'),
+              line: tok('--line'), surface: tok('--surface'), ground: tok('--ground') };
+  const corPonto = enriched.map(d => d.status === 'pos' ? C.ok : d.status === 'neg' ? C.crit : C.dim);
 
   const mediaAfast = enriched.length > 0 ? (enriched.reduce((s,d) => s+d.afast, 0) / enriched.length) : 0;
   const picoAfast = enriched.length > 0 ? enriched.reduce((p,d) => d.afast > p.afast ? d : p, enriched[0]) : null;
@@ -2468,7 +2619,7 @@ function renderTendencia(arr) {
   const prevMesAfast = enriched.length > 1 ? enriched[enriched.length-2] : null;
 
   // Tendência: comparar média dos últimos 3 com a média dos 3 anteriores
-  let tendenciaTxt = 'Sem dados suficientes', tendenciaCor = 'eq';
+  let tendenciaTxt = 'Precisa de 4 meses de histórico', tendenciaCor = 'eq';
   if (enriched.length >= 4) {
     const recent = enriched.slice(-3).reduce((s,d) => s+d.afast, 0) / 3;
     const ant    = enriched.slice(-6, -3).reduce((s,d) => s+d.afast, 0) / Math.max(1, enriched.slice(-6,-3).length);
@@ -2480,65 +2631,65 @@ function renderTendencia(arr) {
 
   const varAtual = prevMesAfast ? atualAfast.afast - prevMesAfast.afast : 0;
   const varAtualPct = prevMesAfast && prevMesAfast.afast > 0 ? (varAtual/prevMesAfast.afast*100) : 0;
+  const estOper = estado(atual.operacionalidade, LIMIARES.operacionalidade);
 
   body.innerHTML = `
     <div class="tend-stats">
-      <div class="tend-stat" style="--tc:#4CAF50"><div class="tv">${atual.operacionalidade.toFixed(1)}%</div><div class="tl">Operacionalidade</div><div class="td">${diff(atual.operacionalidade, prev?prev.operacionalidade:0, 1)}</div></div>
-      <div class="tend-stat" style="--tc:#2196F3"><div class="tv">${atual.total}</div><div class="tl">Efetivo Total</div><div class="td">${diff(atual.total, prev?prev.total:0)}</div></div>
-      <div class="tend-stat" style="--tc:#f44336"><div class="tv">${atual.lts+atual.rr+atual.reforma}</div><div class="tl">Afastados</div><div class="td">${diff(atual.lts+atual.rr+atual.reforma, prev?(prev.lts+prev.rr+prev.reforma):0)}</div></div>
-      <div class="tend-stat" style="--tc:#FFC107"><div class="tv">${atual.abono}</div><div class="tl">Abono</div><div class="td">${diff(atual.abono, prev?prev.abono:0)}</div></div>
+      <div class="tend-stat ${estOper}"><div class="tv">${atual.operacionalidade.toFixed(1)}%</div><div class="tl">Operacionalidade</div><div class="td">${diff(atual.operacionalidade, prev?prev.operacionalidade:0, 'sobe', 'pp')}</div></div>
+      <div class="tend-stat"><div class="tv">${atual.total}</div><div class="tl">Efetivo Total</div><div class="td">${diff(atual.total, prev?prev.total:0, null)}</div></div>
+      <div class="tend-stat"><div class="tv">${afastDe(atual)}</div><div class="tl">Afastados</div><div class="td">${diff(afastDe(atual), prev?afastDe(prev):0, 'desce')}</div></div>
+      <div class="tend-stat"><div class="tv">${atual.abono}</div><div class="tl">Abono</div><div class="td">${diff(atual.abono, prev?prev.abono:0, null)}</div></div>
     </div>
-    <div class="tend-chart-box"><h3 style="font-size:.78rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">Operacionalidade ao longo do tempo</h3><canvas id="chartTend" style="max-height:280px"></canvas></div>
+    ${temRegraAntiga && inicioRegraOutros ? `<div class="pd-nota" style="margin:0 0 14px">
+      📌 <strong>Mudança de regra em ${new Date(inicioRegraOutros + 'T12:00:00').toLocaleDateString('pt-BR')}:</strong>
+      licença especial, curso, baixado e outros afastamentos deixaram de contar como Apto A. Nessa data a
+      operacionalidade cai e os afastados sobem por causa da regra, não por mudança real no efetivo.</div>` : ''}
+    <div class="tend-chart-box">
+      <h3 class="tend-h">Operacionalidade <small>últimos ${diario.length} dias com registro · % de aptos cat A no efetivo total</small></h3>
+      <div class="tend-canvas" style="height:220px"><canvas id="chartTend"></canvas></div>
+    </div>
+    <div class="tend-chart-box">
+      <h3 class="tend-h">Efetivo total <small>sem o tempo certo</small></h3>
+      <div class="tend-canvas" style="height:150px"><canvas id="chartTendTotal"></canvas></div>
+    </div>
 
     <!-- ANÁLISE MENSAL DE AFASTADOS -->
-    <div style="background:#1a2940;border:1px solid #1e3450;border-radius:12px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden">
-      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#f44336,#FF9800,#4CAF50)"></div>
-      <h3 style="font-size:.85rem;color:#4FC3F7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;display:flex;align-items:center;gap:8px">
-        <span style="width:3px;height:14px;background:#4FC3F7;border-radius:2px"></span>📉 Análise Mensal de Afastamentos
-      </h3>
-      <div style="font-size:.7rem;color:#667788;margin-bottom:14px;margin-left:11px">Variações: 🟢 redução · 🔴 aumento · ⚪ estável (±1)</div>
+    <div class="tend-chart-box">
+      <h3 class="tend-h">📉 Análise mensal de afastamentos <small>LTS + outros afastamentos + aguardando R.R + reforma · último retrato de cada mês</small></h3>
+      <div style="font-size:.7rem;color:var(--ink-faint);margin:-4px 0 14px">Variação do mês: 🟢 caiu 2 ou mais · 🔴 subiu 2 ou mais · ⚪ estável</div>
 
       <!-- KPIs específicos de afastados -->
       <div class="tend-stats" style="margin-bottom:14px">
-        <div class="tend-stat" style="--tc:#f44336"><div class="tv">${atualAfast.afast}</div><div class="tl">Afastados Atuais</div><div class="td ${varAtual<0?'tend-up':varAtual>0?'tend-down':'tend-eq'}">${prevMesAfast?(varAtual<0?'▼ ':varAtual>0?'▲ +':'→ ')+varAtual+' ('+(varAtual<0?'':'+')+varAtualPct.toFixed(1)+'%)':'— início'}</div></div>
-        <div class="tend-stat" style="--tc:#4CAF50"><div class="tv">${mediaAfast.toFixed(1)}</div><div class="tl">Média do Período</div><div class="td tend-${tendenciaCor}">${tendenciaTxt}</div></div>
-        <div class="tend-stat" style="--tc:#FF9800"><div class="tv">${picoAfast.afast}</div><div class="tl">Pico</div><div class="td tend-eq">${mesNomes[enriched.indexOf(picoAfast)]}</div></div>
-        <div class="tend-stat" style="--tc:#2196F3"><div class="tv">${menorAfast.afast}</div><div class="tl">Menor</div><div class="td tend-eq">${mesNomes[enriched.indexOf(menorAfast)]}</div></div>
+        <div class="tend-stat"><div class="tv">${atualAfast.afast}</div><div class="tl">Afastados no mês</div><div class="td ${varAtual<0?'tend-up':varAtual>0?'tend-down':'tend-eq'}">${prevMesAfast?(varAtual<0?'▼ ':varAtual>0?'▲ +':'→ ')+varAtual+' ('+(varAtual<0?'':'+')+varAtualPct.toFixed(1)+'%)':'— início'}</div></div>
+        <div class="tend-stat"><div class="tv">${mediaAfast.toFixed(1)}</div><div class="tl">Média do período</div><div class="td tend-${tendenciaCor}">${tendenciaTxt}</div></div>
+        <div class="tend-stat"><div class="tv">${picoAfast.afast}</div><div class="tl">Pico</div><div class="td tend-eq">${mesNomes[enriched.indexOf(picoAfast)]}</div></div>
+        <div class="tend-stat"><div class="tv">${menorAfast.afast}</div><div class="tl">Menor</div><div class="td tend-eq">${mesNomes[enriched.indexOf(menorAfast)]}</div></div>
       </div>
 
       <!-- Gráfico semáforo -->
-      <div style="height:300px;position:relative;margin-bottom:14px"><canvas id="chartAfastMensal"></canvas></div>
+      <div class="tend-canvas" style="height:260px;margin-bottom:14px"><canvas id="chartAfastMensal"></canvas></div>
 
       <!-- Tabela detalhada -->
       ${enriched.length > 1 ? `
       <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:.76rem">
-        <thead><tr>
-          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Mês</th>
-          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Afastados</th>
-          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">LTS</th>
-          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Ag. R.R</th>
-          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Reforma</th>
-          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Variação</th>
-          <th style="background:#0d1b2a;color:#4FC3F7;text-align:left;padding:8px 10px;font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1e3450">Status</th>
-        </tr></thead>
+      <table class="tend-tab">
+        <thead><tr><th>Mês</th><th>Afastados</th><th>LTS</th><th>Outros</th><th>Ag. R.R</th><th>Reforma</th><th>Variação</th><th>Status</th></tr></thead>
         <tbody>
         ${enriched.map((d, i) => {
           const sinal = d.varAbs >= 0 ? '+' : '';
           const cls = d.status === 'pos' ? 'pos' : d.status === 'neg' ? 'neg' : 'eq';
-          const cor = cls === 'pos' ? '#00e676' : cls === 'neg' ? '#ff4444' : '#8899aa';
-          const bg  = cls === 'pos' ? '#00e67615' : cls === 'neg' ? '#ff444415' : '#1e3450';
-          const lbl = cls === 'pos' ? '↓ POSITIVA' : cls === 'neg' ? '↑ NEGATIVA' : '→ ESTÁTICA';
-          const varTxt = d.prevA === null ? '<span style="color:#667788">—</span>'
-            : `<span style="color:${d.varAbs>0?'#ff4444':d.varAbs<0?'#00e676':'#8899aa'};font-weight:700">${sinal}${d.varAbs} (${sinal}${d.varPct.toFixed(1)}%)</span>`;
-          return `<tr style="border-bottom:1px solid #1e3450">
-            <td style="padding:7px 10px;font-weight:600">${mesNomes[i]}</td>
-            <td style="padding:7px 10px;font-weight:700;color:#ff6e6e">${d.afast}</td>
-            <td style="padding:7px 10px">${d.lts}</td>
-            <td style="padding:7px 10px">${d.rr}</td>
-            <td style="padding:7px 10px">${d.reforma}</td>
-            <td style="padding:7px 10px">${varTxt}</td>
-            <td style="padding:7px 10px"><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:.68rem;font-weight:700;background:${bg};color:${cor};border:1px solid ${cor}40">${lbl}</span></td>
+          const lbl = cls === 'pos' ? '↓ QUEDA' : cls === 'neg' ? '↑ ALTA' : '→ ESTÁVEL';
+          const varTxt = d.prevA === null ? '<span class="tend-eq">—</span>'
+            : `<span class="${d.varAbs>0?'tend-down':d.varAbs<0?'tend-up':'tend-eq'}" style="font-weight:700">${sinal}${d.varAbs} (${sinal}${d.varPct.toFixed(1)}%)</span>`;
+          return `<tr>
+            <td style="font-weight:600">${mesNomes[i]}</td>
+            <td style="font-weight:700">${d.afast}</td>
+            <td>${d.lts}</td>
+            <td>${d._semOutros ? '<span class="tend-eq" title="Mês anterior à regra: somados ao Apto A">—</span>' : d.outros}</td>
+            <td>${d.rr}</td>
+            <td>${d.reforma}</td>
+            <td>${varTxt}</td>
+            <td><span class="tend-status ${cls}">${lbl}</span></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -2547,33 +2698,49 @@ function renderTendencia(arr) {
     </div>
   `;
 
+  // Um eixo por grafico. O eixo duplo antigo esticava o efetivo (242 a 246)
+  // na mesma altura da operacionalidade (0 a 100%): variar 2 pessoas parecia
+  // um desabamento.
+  const eixoX = { grid:{ color:C.line }, border:{ color:C.line }, ticks:{ color:C.faint, maxRotation:0, autoSkipPadding:12, font:{size:10} } };
+  const dica  = { backgroundColor:C.ground, borderColor:C.line, borderWidth:1, titleColor:C.ink, bodyColor:C.dim, padding:10, displayColors:false };
+  // 'monotone' suaviza sem inventar picos entre dois pontos (a curva comum passa do valor real).
+  const linha = (cor) => ({ borderColor:cor, backgroundColor:cor + '1A', borderWidth:2, cubicInterpolationMode:'monotone', fill:true,
+                           pointRadius: diario.length > 45 ? 0 : 3, pointHoverRadius:5, pointBackgroundColor:cor,
+                           pointBorderColor:C.surface, pointBorderWidth:2 });
+  const faixa = (vals, folga, piso, teto) => {
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    return { min: Math.max(piso, Math.floor(lo - folga)), max: Math.min(teto, Math.ceil(hi + folga)) };
+  };
+
   if (chartTendencia) chartTendencia.destroy();
+  const fOp = faixa(opData, 5, 0, 100);
   chartTendencia = new Chart(document.getElementById('chartTend'), {
     type: 'line',
-    data: { labels, datasets: [
-      { label: 'Operacionalidade (%)', data: opData, borderColor: '#4CAF50', backgroundColor: '#4CAF5015', tension:.4, fill:true, pointRadius:4 },
-      { label: 'Efetivo Total', data: totalData, borderColor: '#2196F3', backgroundColor: '#2196F315', tension:.4, fill:false, pointRadius:3, yAxisID:'y2' }
-    ] },
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#e0e0e0', font:{size:11} } } },
-      scales:{
-        x:{ grid:{color:'#1e3450'}, ticks:{color:'#8899aa'} },
-        y:{ grid:{color:'#1e3450'}, ticks:{color:'#8899aa', callback:v=>v+'%'}, min:0, max:100 },
-        y2:{ position:'right', grid:{display:false}, ticks:{color:'#8899aa'} }
-      }
+    data: { labels, datasets: [{ label: 'Operacionalidade', data: opData, ...linha(C.ok) }] },
+    options: { responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ display:false },
+        tooltip:{ ...dica, callbacks:{ label: c => c.parsed.y.toFixed(1) + '% operacional' } } },
+      scales:{ x: eixoX,
+        y:{ ...fOp, grid:{ color:C.line }, border:{ display:false }, ticks:{ color:C.faint, callback:v=>v+'%', font:{size:10} } } }
+    }
+  });
+
+  if (chartTendenciaTotal) chartTendenciaTotal.destroy();
+  const fTot = faixa(totalData, 5, 0, Infinity);
+  chartTendenciaTotal = new Chart(document.getElementById('chartTendTotal'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Efetivo total', data: totalData, ...linha(C.acc), fill:false }] },
+    options: { responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ display:false },
+        tooltip:{ ...dica, callbacks:{ label: c => c.parsed.y + ' militares' } } },
+      scales:{ x: eixoX,
+        y:{ ...fTot, grid:{ color:C.line }, border:{ display:false }, ticks:{ color:C.faint, precision:0, font:{size:10} } } }
     }
   });
 
   // Gráfico semáforo de afastados mensais
-  const canvas = document.getElementById('chartAfastMensal');
-  const ctx = canvas.getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 0, 300);
-  grad.addColorStop(0, '#ff444450');
-  grad.addColorStop(0.5, '#ff444420');
-  grad.addColorStop(1, '#ff444405');
-
   if (chartAfastMensalObj) chartAfastMensalObj.destroy();
-  chartAfastMensalObj = new Chart(ctx, {
+  chartAfastMensalObj = new Chart(document.getElementById('chartAfastMensal'), {
     type: 'line',
     data: {
       labels: mesNomes,
@@ -2581,21 +2748,21 @@ function renderTendencia(arr) {
         {
           label: 'Afastados',
           data: afastData,
-          borderColor: '#ff6e6e',
-          backgroundColor: grad,
+          borderColor: C.crit,
+          backgroundColor: C.crit + '1A',
           fill: true,
-          tension: 0.4,
-          borderWidth: 2.5,
+          cubicInterpolationMode: 'monotone',
+          borderWidth: 2,
           pointBackgroundColor: corPonto,
-          pointBorderColor: corBorda,
+          pointBorderColor: C.surface,
           pointBorderWidth: 2,
-          pointRadius: 7,
-          pointHoverRadius: 10
+          pointRadius: 6,
+          pointHoverRadius: 8
         },
         {
           label: 'Média (' + mediaAfast.toFixed(1) + ')',
           data: enriched.map(() => mediaAfast),
-          borderColor: '#ffb30090',
+          borderColor: C.dim,
           borderDash: [6, 4],
           borderWidth: 1.5,
           pointRadius: 0,
@@ -2608,10 +2775,9 @@ function renderTendencia(arr) {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode:'index', intersect:false },
       plugins: {
-        legend: { labels:{color:'#e0e0e0', font:{size:11}, padding:12, usePointStyle:true} },
+        legend: { labels:{ color:C.dim, font:{size:11}, padding:12, usePointStyle:true } },
         tooltip: {
-          backgroundColor:'#0c1622', borderColor:'#243f5a', borderWidth:1,
-          titleColor:'#00d4ff', bodyColor:'#d4e0ef', padding:12,
+          ...dica,
           callbacks: {
             afterBody: (items) => {
               const i = items[0].dataIndex;
@@ -2627,8 +2793,8 @@ function renderTendencia(arr) {
         }
       },
       scales: {
-        x: { grid:{color:'#1e3450'}, ticks:{color:'#8899aa', font:{size:10}} },
-        y: { grid:{color:'#1e3450'}, ticks:{color:'#8899aa', precision:0}, beginAtZero:true }
+        x: eixoX,
+        y: { grid:{ color:C.line }, border:{ display:false }, ticks:{ color:C.faint, precision:0, font:{size:10} }, beginAtZero:true }
       }
     }
   });
@@ -2659,9 +2825,12 @@ function esc(t) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// O nome vai num data-atributo: embutido como string JS no onclick, um
+// apostrofo (D'AVILA) quebrava o clique com erro de sintaxe.
 function pdLinha(m, tag, classe, texto) {
   const nome = esc(m.nome || '');
-  return `<div class="pd-row ${classe}" onclick="pdBuscar('${nome.replace(/'/g,"\'")}')" style="cursor:pointer">
+  return `<div class="pd-row ${classe}" data-nome="${nome}" onclick="pdBuscar(this.dataset.nome)"
+    role="button" tabindex="0" onkeydown="if(event.key==='Enter'){pdBuscar(this.dataset.nome)}" style="cursor:pointer">
     <div class="pd-top">
       <span class="pd-nome">${esc(m.gh || '')} ${nome}</span>
       <span class="pd-tag ${classe}">${esc(tag)}</span>
@@ -2671,8 +2840,8 @@ function pdLinha(m, tag, classe, texto) {
 }
 
 // Reaproveita a busca que ja' existe: rola a tela ate' o militar.
-function pdBuscar(nome) {
-  fecharTool('pendenciasOverlay');
+function pdBuscar(nome, origem) {
+  fecharTool(origem || 'pendenciasOverlay');
   const inp = document.getElementById('searchInput');
   if (!inp) return;
   inp.value = nome;
@@ -2680,7 +2849,7 @@ function pdBuscar(nome) {
 }
 
 function abrirPendencias() {
-  document.getElementById('pendenciasOverlay').classList.add('active');
+  abrirOverlay('pendenciasOverlay');
   renderPendencias();
 }
 
@@ -2742,13 +2911,30 @@ function renderPendencias() {
     || '<div class="pd-vazio">Ninguém aguardando R.R.</div>';
   html += '</div>';
 
-  // ── 4. DADOS QUE O DASHBOARD NÃO CONSEGUE LER ──────────────────────────────
+  // ── 4. AFASTAMENTO QUE JA' TERMINOU NA PLANILHA ────────────────────────────
+  // Ferias e outros afastamentos com o ATE no passado: ou o militar voltou e a
+  // planilha nao foi atualizada (e ele segue contado como afastado), ou o
+  // afastamento foi prorrogado sem a data nova. LTS vencida ja' esta no sino.
+  const hojeZero = new Date(); hojeZero.setHours(0, 0, 0, 0);
+  const encerrados = efetivo.map(m => ({ m, cat: getCategoria(m), fim: parseDataBR(m.ate) }))
+    .filter(x => (x.cat === 'ferias' || x.cat === 'outros') && x.fim && x.fim < hojeZero)
+    .sort((a, b) => a.fim - b.fim);
+  html += `<div class="pd-sec"><h3>🔁 Afastamento com prazo encerrado <span class="n">${encerrados.length}</span></h3>`;
+  html += (encerrados.map(({ m, fim }) => {
+    const dias = Math.round((hojeZero - fim) / 86400000);
+    return pdLinha(m, 'terminou há ' + dias + (dias === 1 ? ' dia' : ' dias'), dias > 7 ? 'crit' : 'aten',
+      `Fim em ${fim.toLocaleDateString('pt-BR')}, mas a planilha ainda registra "${m.funcao || m.sit}". `
+      + 'Se o militar já voltou, atualize a planilha — até lá ele conta como afastado.');
+  }).join('')) || '<div class="pd-vazio">Nenhum afastamento com prazo vencido.</div>';
+  html += '</div>';
+
+  // ── 5. DADOS QUE O DASHBOARD NÃO CONSEGUE LER ──────────────────────────────
   // Uma data malformada na planilha (ex.: "31/082026" sem a barra) faz o militar
   // sumir dos alertas de LTS sem nenhum aviso. Aqui ela aparece.
   const quebrados = [];
   efetivo.forEach(m => {
     const cat = getCategoria(m);
-    const afastado = (cat === 'lts' || cat === 'ferias' || cat === 'reforma');
+    const afastado = (cat === 'lts' || cat === 'ferias' || cat === 'reforma' || cat === 'outros');
     if (afastado && String(m.ate || '').trim() && !parseDataBR(m.ate))
       quebrados.push({ m, campo: 'ATÉ', valor: m.ate });
     if (afastado && String(m.de || '').trim() && m.de !== 'TEMPO' && !parseDataBR(m.de))
@@ -2774,7 +2960,17 @@ function renderPendencias() {
       equipInvalido.push({ m, campo: 'CPPD', valor: m.cppd, interpretado: normCPPD(m.cppd) });
   });
 
-  const inconsistencias = quebrados.length + equipInvalido.length;
+  // Situacao sanitaria: o que nao for aptidao A/B/C, LTS, aguardando R.R,
+  // reforma ou afastamento conhecido sai da contagem de aptos -- e tem de
+  // aparecer aqui, senao o numero cai sem ninguem saber por que.
+  const sitProblema = [];
+  efetivo.forEach(m => {
+    if (getCategoria(m) === 'tempocerto') return;
+    if (sitIrreconhecivel(m)) sitProblema.push({ m, tipo: 'ilegivel' });
+    else if (!String(m.sit || '').trim()) sitProblema.push({ m, tipo: 'branco' });
+  });
+
+  const inconsistencias = quebrados.length + equipInvalido.length + sitProblema.length;
   html += `<div class="pd-sec"><h3>⚠️ Dados inconsistentes na planilha <span class="n">${inconsistencias}</span></h3>`;
   html += (quebrados.map(({ m, campo, valor }) =>
     pdLinha(m, campo, 'crit', `Valor "${valor}" não é uma data válida — este militar fica de fora dos alertas automáticos até ser corrigido na planilha.`)
@@ -2784,6 +2980,10 @@ function renderPendencias() {
       ? pdLinha(m, campo, 'aten', `Grafado como "${valor}" — o dashboard entendeu como ${interpretado} e está contando certo, mas vale corrigir na planilha para o próximo não passar batido.`)
       : pdLinha(m, campo, 'crit', `A coluna ${campo} deveria conter apenas SIM ou NÃO, mas contém: "${valor}". Enquanto estiver assim, conta como não confirmado.`)
   ).join(''));
+  html += (sitProblema.map(({ m, tipo }) => tipo === 'ilegivel'
+    ? pdLinha(m, 'SITUAÇÃO', 'crit', `Situação sanitária "${m.sit}" não é reconhecida. Enquanto não for corrigida na planilha, o militar fica fora dos aptos (em Outros afastamentos).`)
+    : pdLinha(m, 'SITUAÇÃO', 'aten', 'Situação sanitária em branco na planilha. O militar está sendo contado como Apto A por falta de informação.')
+  ).join(''));
   if (inconsistencias === 0) html += '<div class="pd-vazio">Nenhuma inconsistência encontrada. 👍</div>';
   html += '</div>';
 
@@ -2792,90 +2992,89 @@ function renderPendencias() {
 
 // ─── ARMAMENTO ───────────────────────────────────────────────────────────────
 function abrirArmamento() {
-  document.getElementById('armamentoOverlay').classList.add('active');
+  abrirOverlay('armamentoOverlay');
   renderArmamento();
 }
 
+// Mesma regra do card Pronto: SIM e' acautelado, NAO e' nao acautelado, e
+// campo em branco e' "sem informacao" -- antes os tres casos viravam dois e o
+// painel somava o branco ao "sem arma" enquanto o card separava.
+// A base aqui e' o cadastro inteiro, tempo certo incluido: arma e colete sao
+// material carga, e quem esta de saida ainda pode estar com eles.
+function resumoEquip(lista, campo) {
+  const sim = lista.filter(m => equipOk(m[campo])).length;
+  const nao = lista.filter(m => equipNao(m[campo])).length;
+  return { t: lista.length, sim, nao, semInfo: lista.length - sim - nao };
+}
+
 function renderArmamento() {
-  const total       = efetivo.length;
-  const armaSim     = efetivo.filter(m => m.arma === 'SIM').length;
-  const armaNao     = efetivo.filter(m => m.arma === 'NÃO' || m.arma === 'NAO').length;
-  const armaPend    = total - armaSim;
-  const coleteSim   = efetivo.filter(m => m.colete === 'SIM').length;
-  const colPend     = total - coleteSim;
-  const pct = (x) => total > 0 ? ((x/total)*100).toFixed(1) : '0';
+  const total  = efetivo.length;
+  const arma   = resumoEquip(efetivo, 'arma');
+  const colete = resumoEquip(efetivo, 'colete');
+  const pct = (x) => total > 0 ? ((x/total)*100).toFixed(1) : '0.0';
 
-  const barraSetor = (setor, filtro) => {
-    const lista = efetivo.filter(filtro);
-    const t = lista.length;
-    if (t === 0) return '';
-    const arm = lista.filter(m => m.arma === 'SIM').length;
-    const sem = t - arm;
-    const pa = (arm/t*100).toFixed(0);
+  const barra = (setor, campo) => {
+    const lista = efetivo.filter(m => setorDe(m) === setor);
+    if (lista.length === 0) return '';
+    const r = resumoEquip(lista, campo);
+    const seg = (cls, n, rot) => {
+      if (!n) return '';
+      const w = n / r.t * 100;
+      // Numero dentro do segmento so' quando cabe; senao fica no title e na soma ao lado.
+      return `<div class="${cls}" style="flex:${n} 1 0" title="${rot}: ${n}">${w >= 12 ? n : ''}</div>`;
+    };
     return `<div class="arma-row">
-      <span class="arl" style="color:${setor==='OFICIAIS'?'#FFD600':setor==='CIA'?'#2196F3':'#26C6DA'}">${setor}</span>
-      <div class="art">
-        <div class="ars-ok" style="width:${pa}%">${arm}</div>
-        <div class="ars-no" style="width:${100-pa}%">${sem||''}</div>
+      <span class="arl">${NOME_SETOR[setor]}</span>
+      <div class="art" role="img" aria-label="${NOME_SETOR[setor]}: ${r.sim} acautelados, ${r.nao} não, ${r.semInfo} sem informação">
+        ${seg('ars-ok', r.sim, 'Acautelado')}${seg('ars-no', r.nao, 'Não acautelado')}${seg('ars-na', r.semInfo, 'Sem informação')}
       </div>
-      <span class="arv" style="color:#4CAF50">${arm}✓ <span style="color:#f44336">${sem}✗</span></span>
+      <span class="arv">${r.sim} de ${r.t}</span>
     </div>`;
   };
-
-  const barraColete = (setor, filtro) => {
-    const lista = efetivo.filter(filtro);
-    const t = lista.length;
-    if (t === 0) return '';
-    const cs = lista.filter(m => m.colete === 'SIM').length;
-    const sem = t - cs;
-    const pc = (cs/t*100).toFixed(0);
-    return `<div class="arma-row">
-      <span class="arl" style="color:${setor==='OFICIAIS'?'#FFD600':setor==='CIA'?'#2196F3':'#26C6DA'}">${setor}</span>
-      <div class="art">
-        <div class="ars-ok" style="width:${pc}%">${cs}</div>
-        <div class="ars-no" style="width:${100-pc}%">${sem||''}</div>
-      </div>
-      <span class="arv" style="color:#4CAF50">${cs}✓ <span style="color:#f44336">${sem}✗</span></span>
+  const legenda = `<div class="arma-leg">
+      <span><i class="ars-ok"></i>Acautelado</span><span><i class="ars-no"></i>Não</span><span><i class="ars-na"></i>Sem informação</span>
     </div>`;
-  };
 
   const pendentesArma = efetivo
     .map((m,i) => ({...m, _idx:i}))
-    .filter(m => m.arma !== 'SIM' && getCategoria(m) === 'oper')
-    .sort((a,b) => (ORDEM_PATENTE[a.gh]||99) - (ORDEM_PATENTE[b.gh]||99));
+    .filter(m => !equipOk(m.arma) && getCategoria(m) === 'oper')
+    .sort((a,b) => (equipNao(b.arma) - equipNao(a.arma))
+                || ((ORDEM_PATENTE[(a.gh||'').trim().toUpperCase()]||99) - (ORDEM_PATENTE[(b.gh||'').trim().toUpperCase()]||99)));
 
   document.getElementById('armamentoBody').innerHTML = `
     <div class="arma-top">
-      <div class="arma-c ac-ok"><div class="av">${armaSim}</div><div class="al">Armas Acauteladas</div><div class="ap">${pct(armaSim)}% do efetivo</div></div>
-      <div class="arma-c ac-pend"><div class="av">${armaPend}</div><div class="al">Sem Arma</div><div class="ap">${pct(armaPend)}% pendente</div></div>
-      <div class="arma-c ac-cok"><div class="av">${coleteSim}</div><div class="al">Coletes Acautelados</div><div class="ap">${pct(coleteSim)}% do efetivo</div></div>
-      <div class="arma-c ac-cpend"><div class="av">${colPend}</div><div class="al">Sem Colete</div><div class="ap">${pct(colPend)}% pendente</div></div>
+      <div class="arma-c"><div class="av">${arma.sim}</div><div class="al">Armas acauteladas</div><div class="ap">${pct(arma.sim)}% dos ${total} cadastrados</div></div>
+      <div class="arma-c"><div class="av">${arma.nao}</div><div class="al">Sem arma</div><div class="ap">${arma.semInfo} sem informação</div></div>
+      <div class="arma-c"><div class="av">${colete.sim}</div><div class="al">Coletes acautelados</div><div class="ap">${pct(colete.sim)}% dos ${total} cadastrados</div></div>
+      <div class="arma-c"><div class="av">${colete.nao}</div><div class="al">Sem colete</div><div class="ap">${colete.semInfo} sem informação</div></div>
     </div>
     <div class="arma-setores">
       <div class="arma-bloco">
-        <h4>🔫 Armas por Setor</h4>
-        ${barraSetor('OFICIAIS', isOficial)}
-        ${barraSetor('CIA', m => m.cia === 'CIA' && !isOficial(m))}
-        ${barraSetor('CCSV', isCCSV)}
+        <h4>🔫 Armas por setor</h4>
+        ${SETORES.map(s => barra(s, 'arma')).join('')}
+        ${legenda}
       </div>
       <div class="arma-bloco">
-        <h4>🦺 Coletes por Setor</h4>
-        ${barraColete('OFICIAIS', isOficial)}
-        ${barraColete('CIA', m => m.cia === 'CIA' && !isOficial(m))}
-        ${barraColete('CCSV', isCCSV)}
+        <h4>🦺 Coletes por setor</h4>
+        ${SETORES.map(s => barra(s, 'colete')).join('')}
+        ${legenda}
       </div>
     </div>
     ${pendentesArma.length > 0 ? `
     <div class="arma-pend">
-      <h4>⚠️ Militares Operacionais Sem Arma (${pendentesArma.length})</h4>
+      <h4>⚠️ Aptos cat A sem arma confirmada (${pendentesArma.length})</h4>
       <div class="pend-list">
         ${pendentesArma.map(m => `
-          <div class="pend-item" ${isAdmin ? `onclick="editarMilitar(${m._idx});fecharTool('armamentoOverlay')"` : 'style="cursor:default"'}>
+          <div class="pend-item" role="button" tabindex="0" data-nome="${esc(m.nome)}"
+               ${isAdmin ? `onclick="editarMilitar(${m._idx});fecharTool('armamentoOverlay')"` : `onclick="pdBuscar(this.dataset.nome, 'armamentoOverlay')"`}
+               onkeydown="if(event.key==='Enter'){this.click()}">
             <div>
-              <div class="pn">${m.nome}</div>
-              <div class="pp">${m.gh} · ${m.cia} · ${m.funcao||'—'}</div>
+              <div class="pn">${esc(m.nome)}</div>
+              <div class="pp">${esc(m.gh)} · ${esc(m.cia)} · ${esc(m.funcao||'—')}</div>
             </div>
-            <span class="log-chip ch-del">SEM ARMA</span>
+            ${equipNao(m.arma)
+              ? '<span class="log-chip ch-del">SEM ARMA</span>'
+              : '<span class="log-chip ch-na">NÃO INFORMADO</span>'}
           </div>
         `).join('')}
       </div>
@@ -2887,7 +3086,7 @@ function renderArmamento() {
 let _logFiltro = 'all';
 
 function abrirLog() {
-  document.getElementById('logOverlay').classList.add('active');
+  abrirOverlay('logOverlay');
   carregarLog();
 }
 
@@ -2905,11 +3104,13 @@ function carregarLog() {
           <button class="log-fbtn" onclick="filtrarLog('del')">🗑️ Exclusões</button>
           <button class="log-fbtn" onclick="filtrarLog('foto')">📷 Fotos</button>
         </div>
-        <div class="tend-empty"><span class="ico">📋</span>Nenhuma alteração registrada ainda.<br><small style="color:#667788">As próximas edições serão gravadas aqui.</small></div>`;
+        <div class="tend-empty"><span class="ico">📋</span>Nenhuma alteração registrada ainda.<br><small style="color:var(--ink-faint)">As próximas edições serão gravadas aqui.</small></div>`;
       return;
     }
-    const arr = Object.values(dados).sort((a,b) => b.ts - a.ts);
+    const arr = Object.values(dados).filter(l => l && typeof l === 'object').sort((a,b) => (b.ts||0) - (a.ts||0));
     renderLog(arr);
+  }).catch(err => {
+    body.innerHTML = `<div class="tend-empty"><span class="ico">❌</span>Não foi possível ler o log: ${esc(err.message)}</div>`;
   });
 }
 
@@ -2918,9 +3119,16 @@ function filtrarLog(tipo) {
   // renderLog reconstrói a toolbar com a classe "on" correta — sem depender de window.event
   LOG_REF.orderByChild('ts').limitToLast(100).once('value').then(snap => {
     const dados = snap.val(); if (!dados) return;
-    const arr = Object.values(dados).sort((a,b) => b.ts - a.ts);
+    const arr = Object.values(dados).filter(l => l && typeof l === 'object').sort((a,b) => (b.ts||0) - (a.ts||0));
     renderLog(arr);
-  });
+  }).catch(() => {});
+}
+
+// A mensagem do log traz <strong> e vem do Firebase, onde qualquer um com a
+// configuracao publica da pagina consegue gravar. Renderizar cru deixava passar
+// um <img onerror=...>; agora tudo e' escapado e so' o negrito volta.
+function htmlDoLog(msg) {
+  return esc(msg).replace(/&lt;(\/?)strong&gt;/g, '<$1strong>');
 }
 
 function renderLog(arrCompleto) {
@@ -2929,15 +3137,16 @@ function renderLog(arrCompleto) {
   const icones = { edit:'✏️', add:'➕', del:'🗑️', sync:'🔄', foto:'📷' };
   const chips  = { edit:'EDIÇÃO', add:'ADIÇÃO', del:'EXCLUSÃO', sync:'SYNC', foto:'FOTO' };
   const itensHTML = arr.map(l => {
+    const tipo = String(l.tipo || '').replace(/[^a-z]/g, '');
     const dt = new Date(l.ts);
-    const dtStr = dt.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const dtStr = isNaN(dt) ? '—' : dt.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
     return `<div class="log-e">
-      <div class="log-i li-${l.tipo}">${icones[l.tipo]||'•'}</div>
+      <div class="log-i li-${tipo}">${icones[tipo]||'•'}</div>
       <div class="log-b">
-        <div class="log-m">${l.msg}</div>
-        <div class="log-mt"><span>${dtStr}</span><span>${l.usuario||'—'}</span></div>
+        <div class="log-m">${htmlDoLog(l.msg)}</div>
+        <div class="log-mt"><span>${dtStr}</span><span>${esc(l.usuario||'—')}</span></div>
       </div>
-      <span class="log-chip ch-${l.tipo}">${chips[l.tipo]||l.tipo.toUpperCase()}</span>
+      <span class="log-chip ch-${tipo}">${chips[tipo]||esc(tipo.toUpperCase()||'—')}</span>
     </div>`;
   }).join('') || '<div class="tend-empty"><span class="ico">🔍</span>Nenhum registro neste filtro.</div>';
 
@@ -2956,7 +3165,7 @@ function renderLog(arrCompleto) {
 
 // ─── BOLETIM DIÁRIO ──────────────────────────────────────────────────────────
 function abrirBoletim() {
-  document.getElementById('boletimOverlay').classList.add('active');
+  abrirOverlay('boletimOverlay');
   renderBoletim();
 }
 
@@ -2965,30 +3174,33 @@ function renderBoletim() {
   const hoje = new Date();
   const dtStr = hoje.toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'}).toUpperCase();
   const total = m.t; // sem TC
+  const pct = n => total > 0 ? (n / total * 100).toFixed(1) + '%' : '—';
 
-  const setorStats = (filtro) => {
-    const list = efetivo.filter(filtro);
+  // Mesma base do quadro 1: o tempo certo fica fora. Antes esta tabela somava
+  // 2 militares a mais que a de cima -- o mesmo documento com dois totais.
+  const AFAST = ['lts', 'outros', 'reforma', 'agrr'];
+  const setorStats = (setor) => {
+    const list = efetivo.filter(x => setorDe(x) === setor && getCategoria(x) !== 'tempocerto');
+    const c = k => list.filter(x => getCategoria(x) === k).length;
     return {
       total: list.length,
-      aptoA: list.filter(x => getCategoria(x) === 'oper').length,
-      aptoB: list.filter(x => getCategoria(x) === 'aptob').length,
-      aptoC: list.filter(x => getCategoria(x) === 'aptoc').length,
-      afast: list.filter(x => ['lts','reforma','agrr'].includes(getCategoria(x))).length,
-      fer:   list.filter(x => getCategoria(x) === 'ferias').length,
+      aptoA: c('oper'),
+      restr: c('aptob') + c('aptoc'),
+      afast: list.filter(x => AFAST.includes(getCategoria(x))).length,
+      fer:   c('ferias'),
     };
   };
-  const sOf   = setorStats(isOficial);
-  const sCia  = setorStats(m => m.cia === 'CIA' && !isOficial(m));
-  const sCCSV = setorStats(isCCSV);
+  const setores = SETORES.map(s => ({ s, ...setorStats(s) })).filter(x => x.s !== 'OUTROS' || x.total > 0);
+  const soma = k => setores.reduce((acc, x) => acc + x[k], 0);
 
   const oficiais = efetivo
     .map((x,i) => ({...x, _idx:i}))
     .filter(x => isOficial(x) && getCategoria(x) !== 'tempocerto')
-    .sort((a,b) => (ORDEM_PATENTE[a.gh]||99) - (ORDEM_PATENTE[b.gh]||99));
+    .sort((a,b) => (ORDEM_PATENTE[(a.gh||'').trim().toUpperCase()]||99) - (ORDEM_PATENTE[(b.gh||'').trim().toUpperCase()]||99));
 
   // Comandante para a assinatura: função CMT (excluindo SUBCMT)
   const cmt = oficiais.find(o => (o.funcao||'').toUpperCase().includes('CMT') && !(o.funcao||'').toUpperCase().includes('SUB'));
-  const assinatura = cmt ? `${cmt.gh} ${cmt.nome}` : 'COMANDANTE DO BEPE';
+  const assinatura = cmt ? `${esc(cmt.gh)} ${esc(cmt.nome)}` : 'COMANDANTE DO BEPE';
 
   document.getElementById('boletimBody').innerHTML = `
     <div class="bol-paper">
@@ -2997,6 +3209,7 @@ function renderBoletim() {
         <h2>Polícia Militar do Estado do Rio de Janeiro</h2>
         <h3>Batalhão Especializado de Policiamento em Estádio — BEPE</h3>
         <div class="dt">BOLETIM DE SITUAÇÃO DO EFETIVO — ${dtStr}</div>
+        <div class="bol-fonte">Dados da planilha EFETIVO 2025 sincronizados em ${esc(ultimaSyncTexto())}</div>
       </div>
       <div class="bol-kpis">
         <div class="bk bk-b"><div class="bv">${total}</div><div class="bl">Efetivo Total</div></div>
@@ -3009,15 +3222,16 @@ function renderBoletim() {
         <table class="bol-t">
           <thead><tr><th>Categoria</th><th>Qtd</th><th>%</th><th>Observação</th></tr></thead>
           <tbody>
-            <tr><td>Apto Cat A — Operacional</td><td>${m.aptoA}</td><td>${(m.aptoA/total*100).toFixed(1)}%</td><td></td></tr>
-            <tr><td>Apto Cat B — Restrito</td><td>${m.aptoB}</td><td>${(m.aptoB/total*100).toFixed(1)}%</td><td>Restrição de atividade</td></tr>
-            <tr><td>Apto Cat C — Restrito severo</td><td>${m.aptoC}</td><td>${(m.aptoC/total*100).toFixed(1)}%</td><td></td></tr>
-            <tr><td>De Férias</td><td>${m.fer}</td><td>${(m.fer/total*100).toFixed(1)}%</td><td></td></tr>
-            <tr><td>LTS — Licença Tratamento Saúde</td><td>${m.lts}</td><td>${(m.lts/total*100).toFixed(1)}%</td><td></td></tr>
-            <tr><td>Aguardando R.R</td><td>${m.rr}</td><td>${(m.rr/total*100).toFixed(1)}%</td><td></td></tr>
-            <tr><td>Ag. Reforma</td><td>${m.reforma}</td><td>${(m.reforma/total*100).toFixed(1)}%</td><td></td></tr>
-            <tr><td>Tempo Certo</td><td>${m.tc}</td><td>—</td><td>Excluído da contagem</td></tr>
-            <tr class="bol-total"><td>TOTAL</td><td>${total}</td><td>100%</td><td></td></tr>
+            <tr><td>Apto Cat A — Operacional</td><td>${m.aptoA}</td><td>${pct(m.aptoA)}</td><td></td></tr>
+            <tr><td>Apto Cat B — Restrito</td><td>${m.aptoB}</td><td>${pct(m.aptoB)}</td><td>Restrição de atividade</td></tr>
+            <tr><td>Apto Cat C — Restrito severo</td><td>${m.aptoC}</td><td>${pct(m.aptoC)}</td><td></td></tr>
+            <tr><td>De Férias</td><td>${m.fer}</td><td>${pct(m.fer)}</td><td></td></tr>
+            <tr><td>LTS — Licença Tratamento Saúde</td><td>${m.lts}</td><td>${pct(m.lts)}</td><td></td></tr>
+            <tr><td>Outros afastamentos</td><td>${m.outros}</td><td>${pct(m.outros)}</td><td>Licença especial, curso, baixado etc.</td></tr>
+            <tr><td>Aguardando R.R</td><td>${m.rr}</td><td>${pct(m.rr)}</td><td></td></tr>
+            <tr><td>Ag. Reforma</td><td>${m.reforma}</td><td>${pct(m.reforma)}</td><td></td></tr>
+            <tr class="bol-total"><td>TOTAL</td><td>${total}</td><td>${total > 0 ? '100%' : '—'}</td><td></td></tr>
+            <tr><td>Tempo Certo</td><td>${m.tc}</td><td>—</td><td>Fora do total acima</td></tr>
           </tbody>
         </table>
       </div>
@@ -3026,19 +3240,18 @@ function renderBoletim() {
         <table class="bol-t">
           <thead><tr><th>Setor</th><th>Total</th><th>Apto A</th><th>Restritos</th><th>Afastados</th><th>Férias</th></tr></thead>
           <tbody>
-            <tr><td>Oficiais</td><td>${sOf.total}</td><td>${sOf.aptoA}</td><td>${sOf.aptoB+sOf.aptoC}</td><td>${sOf.afast}</td><td>${sOf.fer}</td></tr>
-            <tr><td>CIA</td><td>${sCia.total}</td><td>${sCia.aptoA}</td><td>${sCia.aptoB+sCia.aptoC}</td><td>${sCia.afast}</td><td>${sCia.fer}</td></tr>
-            <tr><td>CCSV</td><td>${sCCSV.total}</td><td>${sCCSV.aptoA}</td><td>${sCCSV.aptoB+sCCSV.aptoC}</td><td>${sCCSV.afast}</td><td>${sCCSV.fer}</td></tr>
-            <tr class="bol-total"><td>TOTAL</td><td>${sOf.total+sCia.total+sCCSV.total}</td><td>${sOf.aptoA+sCia.aptoA+sCCSV.aptoA}</td><td>${sOf.aptoB+sOf.aptoC+sCia.aptoB+sCia.aptoC+sCCSV.aptoB+sCCSV.aptoC}</td><td>${sOf.afast+sCia.afast+sCCSV.afast}</td><td>${sOf.fer+sCia.fer+sCCSV.fer}</td></tr>
+            ${setores.map(x => `<tr><td>${NOME_SETOR[x.s]}</td><td>${x.total}</td><td>${x.aptoA}</td><td>${x.restr}</td><td>${x.afast}</td><td>${x.fer}</td></tr>`).join('')}
+            <tr class="bol-total"><td>TOTAL</td><td>${soma('total')}</td><td>${soma('aptoA')}</td><td>${soma('restr')}</td><td>${soma('afast')}</td><td>${soma('fer')}</td></tr>
           </tbody>
         </table>
+        <div class="bol-nota">Afastados = LTS, outros afastamentos, aguardando R.R e aguardando reforma. Oficiais contam só na linha Oficiais.</div>
       </div>
       <div class="bol-sec">
         <h4>3. Oficiais</h4>
         <table class="bol-t">
           <thead><tr><th>Posto</th><th>RG</th><th>Nome</th><th>Função</th><th>Situação</th></tr></thead>
           <tbody>
-            ${oficiais.map(o => `<tr><td>${o.gh}</td><td>${o.rg||'—'}</td><td>${o.nome}</td><td>${o.funcao||'—'}</td><td>${o.sit||'—'}</td></tr>`).join('')}
+            ${oficiais.map(o => `<tr><td>${esc(o.gh)}</td><td>${esc(o.rg||'—')}</td><td>${esc(o.nome)}</td><td>${esc(o.funcao||'—')}</td><td>${esc(o.sit||'—')}</td></tr>`).join('')}
           </tbody>
         </table>
       </div>
@@ -3053,96 +3266,24 @@ function renderBoletim() {
 }
 
 // ─── HOOKS DE LOG: registrar alterações automaticamente ─────────────────────
-// Salvar referência das funções originais
-const _origSalvarMilitar = salvarMilitar;
-const _origExcluirUm     = excluirUm;
-const _origExcluirSel    = excluirSelecionados;
+// Abono/observação são registrados dentro de salvarMilitar, depois que o
+// Firebase confirma. As fotos passam por aqui, também só depois de gravadas.
 const _origSaveFoto      = saveFoto;
 const _origDeleteFoto    = deleteFoto;
-
-window.salvarMilitar = function() {
-  // Snapshot ANTES de salvar: o array é reordenado pelo sort, então não
-  // podemos confiar nos índices depois — lemos os valores direto do formulário.
-  const ehEdicao = editingIdx >= 0;
-  const antes    = ehEdicao && efetivo[editingIdx] ? {...efetivo[editingIdx]} : null;
-  const lenAntes = efetivo.length;
-
-  _origSalvarMilitar.apply(this, arguments);
-
-  // Se o modal continua aberto, a validação falhou — nada foi salvo.
-  if (document.getElementById('modalOverlay').classList.contains('active')) return;
-
-  // Valores salvos = o que está nos campos do formulário
-  const depois = {
-    gh:     document.getElementById('fGh').value,
-    nome:   document.getElementById('fNome').value.trim().toUpperCase(),
-    rg:     document.getElementById('fRg').value.trim(),
-    cia:    document.getElementById('fCia').value,
-    funcao: document.getElementById('fFuncao').value.trim().toUpperCase(),
-    sit:    document.getElementById('fSit').value,
-    arma:   document.getElementById('fArma').value,
-    colete: document.getElementById('fColete').value,
-    abono:  document.getElementById('fAbono').value,
-    obs:    document.getElementById('fObs').value.trim()
-  };
-
-  // Patente, funcao, arma, situacao e colete vem da planilha e nao podem mais
-  // mudar por aqui -- logar essas mudancas seria registrar algo impossivel.
-  // Sobram os dois campos que pertencem ao dashboard.
-  if (ehEdicao && antes) {
-    const mudancas = [];
-    if ((antes.abono||'') !== (depois.abono||''))
-      mudancas.push(`Abono: <strong>${depois.abono ? 'cadastrado' : 'removido'}</strong>`);
-    if ((antes.obs||'') !== (depois.obs||''))
-      mudancas.push(`Observação atualizada`);
-    if (mudancas.length > 0) {
-      registrarLog('edit', `<strong>${depois.nome}</strong> — ${mudancas.join(' · ')}`);
-    }
-  }
-};
-
-window.excluirUm = function(idx) {
-  const m = efetivo[idx];
-  const orig = window.confirm;
-  let confirmou = false;
-  window.confirm = (msg) => { confirmou = orig(msg); return confirmou; };
-  _origExcluirUm.apply(this, arguments);
-  window.confirm = orig;
-  if (confirmou && m) registrarLog('del', `Militar excluído: <strong>${m.gh} ${m.nome}</strong> — RG ${m.rg||'—'}`);
-};
-
-window.excluirSelecionados = function() {
-  // Capturar quem está selecionado ANTES da exclusão (índices ficam inválidos depois)
-  const selecionados = [...document.querySelectorAll('.row-cb:checked')]
-    .map(cb => efetivo[parseInt(cb.dataset.idx)])
-    .filter(Boolean);
-  const orig = window.confirm;
-  let confirmou = false;
-  window.confirm = (msg) => { confirmou = orig(msg); return confirmou; };
-  _origExcluirSel.apply(this, arguments);
-  window.confirm = orig;
-  if (confirmou && selecionados.length > 0) {
-    const nomes = selecionados.map(m => `${m.gh} ${m.nome}`).join(', ');
-    registrarLog('del', `Exclusão em lote (<strong>${selecionados.length}</strong>): ${nomes}`);
-  }
-};
 
 window.saveFoto = function(rg, base64) {
   const r = _origSaveFoto.apply(this, arguments);
   const mil = efetivo.find(x => x.rg === rg);
-  if (mil) registrarLog('foto', `Foto cadastrada para <strong>${mil.nome}</strong> — RG ${rg}`);
+  if (mil) r.then(() => registrarLog('foto', `Foto cadastrada para <strong>${mil.nome}</strong> — RG ${rg}`), () => {});
   return r;
 };
 
 window.deleteFoto = function(rg) {
   const r = _origDeleteFoto.apply(this, arguments);
   const mil = efetivo.find(x => x.rg === rg);
-  if (mil) registrarLog('foto', `Foto removida de <strong>${mil.nome}</strong> — RG ${rg}`);
+  if (mil) r.then(() => registrarLog('foto', `Foto removida de <strong>${mil.nome}</strong> — RG ${rg}`), () => {});
   return r;
 };
-
-// Grava snapshot diário ao carregar
-setTimeout(gravarSnapshotDiario, 4000);
 
 </script>
 </body>
