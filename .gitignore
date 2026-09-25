@@ -17,3 +17,7 @@ desktop.ini
 # tem funcao no projeto -- versionar publicaria dado pessoal que hoje nao esta
 # exposto. Os arquivos continuam no disco, apenas fora do git.
 previews/
+
+# Relatorios gerados pelas skills (nomes, situacao de saude, afastamentos).
+# Tudo o que entra no repositorio fica publico no GitHub Pages.
+relatorios/
