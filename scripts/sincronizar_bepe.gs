@@ -15,6 +15,15 @@ const NOME_ABA     = 'EFETIVO 2025'; // nome exato da aba (sem sensibilidade a m
 // bepe-dashboard. Enquanto as contas nao forem consolidadas, o segredo resolve.
 //
 // O valor fica em Propriedades do Script, nunca no codigo e nunca no GitHub.
+//
+// O segredo passa por cima das regras do banco (firebase/database.rules.json),
+// que fecham /efetivo e /meta para qualquer gravacao vinda do site. Por isso:
+//   - trocar o segredo no console exige atualizar FIREBASE_SECRET aqui, ou a
+//     sincronizacao para (e o e-mail de falha avisa);
+//   - trocar o segredo por outra credencial que obedeca as regras exige liberar
+//     essa credencial nas regras antes, ou a sincronizacao para.
+// Quem pode editar este Apps Script consegue ler o segredo: e' acesso total
+// ao banco. Mantenha a lista de editores da planilha curta.
 function segredoFirebase() {
   const s = PropertiesService.getScriptProperties().getProperty('FIREBASE_SECRET');
   if (!s) {

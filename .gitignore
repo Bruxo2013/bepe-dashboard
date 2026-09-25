@@ -18,6 +18,14 @@ desktop.ini
 # exposto. Os arquivos continuam no disco, apenas fora do git.
 previews/
 
+# Copia do efetivo (nome, RG, ID funcional). O dashboard le do Firebase; um
+# arquivo destes no repositorio vai direto para o GitHub Pages, aberto a todos.
+efetivo_data.js
+
 # Relatorios gerados pelas skills (nomes, situacao de saude, afastamentos).
 # Tudo o que entra no repositorio fica publico no GitHub Pages.
 relatorios/
+
+# Emuladores do Firebase (testes das regras)
+firebase/*.log
+firebase/.firebaserc

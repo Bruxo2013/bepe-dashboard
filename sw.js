@@ -1,7 +1,7 @@
 // Service worker do Dashboard Efetivo BEPE.
 //
 // Estrategia deliberada:
-//   - HTML e efetivo_data.js  -> REDE PRIMEIRO, cache so' como rede de seguranca.
+//   - HTML                    -> REDE PRIMEIRO, cache so' como rede de seguranca.
 //     Codigo velho preso em cache ja' causou problema aqui (o CEL AGUIAR nao
 //     aparecia porque o navegador servia a versao antiga). Online sempre pega
 //     o mais novo; offline cai no ultimo que funcionou.
@@ -10,17 +10,20 @@
 //   - Firebase              -> NAO intercepta. O tempo real usa WebSocket e
 //     qualquer interferencia aqui quebraria a sincronizacao.
 
-const VERSAO = 'bepe-v2';
+// v3: efetivo_data.js saiu do site (era a copia de maio do efetivo, com dados
+// pessoais). Trocar a versao faz o 'activate' apagar os caches antigos, que
+// guardavam esse arquivo nos aparelhos.
+const VERSAO = 'bepe-v3';
 
 const ESSENCIAIS = [
   './dashboard_efetivo.html',
-  './efetivo_data.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
   './vendor/chart.umd.min.js',
   './vendor/xlsx.full.min.js',
   './vendor/firebase-app-compat.js',
+  './vendor/firebase-auth-compat.js',
   './vendor/firebase-database-compat.js',
 ];
 

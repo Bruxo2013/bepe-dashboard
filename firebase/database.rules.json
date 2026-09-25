@@ -1,0 +1,90 @@
+// Regras do Realtime Database bepe-dashboard-default-rtdb.
+// Como aplicar: firebase/LEIA-ME.md. Testes: firebase/testes/regras.test.mjs.
+//
+// Quem e' quem:
+//   admin   -> e-mail em /admins (chave = e-mail minusculo com "." trocado por ",")
+//   leitor  -> e-mail em /leitores (mesma chave)
+//   Apps Script (sincronizador) -> usa o segredo do banco, que IGNORA estas regras.
+//
+// So' vale login com e-mail verificado e presente na lista. "auth != null"
+// sozinho nao protege nada: com o login Google ativo, qualquer conta Google
+// do mundo fica autenticada.
+//
+// As listas /admins, /leitores e a chave /config/leituraPublica so' mudam
+// pelo console do Firebase. Nenhuma regra abaixo permite grava-las pelo site.
+{
+  "rules": {
+    // Dados da planilha. Leitura publica so' com config/leituraPublica = true.
+    // Admin grava apenas abono e obs de um militar que ja' existe; os demais
+    // campos pertencem a planilha e ficam travados no valor atual.
+    "efetivo": {
+      ".read": "root.child('config/leituraPublica').val() === true || (auth != null && auth.token.email != null && auth.token.email_verified === true && (root.child('admins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true || root.child('leitores').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true))",
+      "$pos": {
+        ".write": "auth != null && auth.token.email != null && auth.token.email_verified === true && root.child('admins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true && data.exists() && newData.exists() && newData.child('gh').val() === data.child('gh').val() && newData.child('rg').val() === data.child('rg').val() && newData.child('id').val() === data.child('id').val() && newData.child('nome').val() === data.child('nome').val() && newData.child('cia').val() === data.child('cia').val() && newData.child('funcao').val() === data.child('funcao').val() && newData.child('sit').val() === data.child('sit').val() && newData.child('de').val() === data.child('de').val() && newData.child('ate').val() === data.child('ate').val() && newData.child('arma').val() === data.child('arma').val() && newData.child('colete').val() === data.child('colete').val() && newData.child('ferias').val() === data.child('ferias').val() && newData.child('cppd').val() === data.child('cppd').val()",
+        "abono": { ".validate": "newData.isString() && (newData.val() === '' || newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/))" },
+        "obs":   { ".validate": "newData.isString() && newData.val().length <= 1000" },
+        // Campo que a planilha venha a criar no futuro tambem fica travado.
+        "$campo": { ".validate": "newData.val() === data.val()" }
+      }
+    },
+
+    // Hora da ultima sincronizacao. So' o Apps Script grava.
+    "meta": {
+      ".read": "root.child('config/leituraPublica').val() === true || (auth != null && auth.token.email != null && auth.token.email_verified === true && (root.child('admins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true || root.child('leitores').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true))"
+    },
+
+    // Fotos 200x200 em data URL. Admin grava e apaga.
+    "fotos": {
+      ".read": "root.child('config/leituraPublica').val() === true || (auth != null && auth.token.email != null && auth.token.email_verified === true && (root.child('admins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true || root.child('leitores').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true))",
+      "$foto": {
+        ".write": "auth != null && auth.token.email != null && auth.token.email_verified === true && root.child('admins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true",
+        ".validate": "$foto.beginsWith('rg_') && $foto.length <= 40 && newData.isString() && newData.val().length <= 150000 && (newData.val().beginsWith('data:image/jpeg;base64,') || newData.val().beginsWith('data:image/png;base64,'))"
+      }
+    },
+
+    // Retrato diario da Tendencia. Admin e leitor gravam (a TV do quartel entra
+    // com uma conta de leitor); visitante anonimo nao grava, e ninguem apaga.
+    "historico": {
+      ".read": "root.child('config/leituraPublica').val() === true || (auth != null && auth.token.email != null && auth.token.email_verified === true && (root.child('admins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true || root.child('leitores').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true))",
+      "$dia": {
+        ".write": "newData.exists() && auth != null && auth.token.email != null && auth.token.email_verified === true && (root.child('admins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true || root.child('leitores').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true)",
+        ".validate": "$dia.matches(/^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/) && newData.hasChildren(['data', 'total', 'ts']) && newData.child('data').val() === $dia",
+        "data": { ".validate": "newData.isString()" },
+        "ts":   { ".validate": "newData.isNumber()" },
+        "operacionalidade": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+        // Contagens (total, aptoA, lts...). Numero, nunca texto.
+        "$contagem": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5000" }
+      }
+    },
+
+    // Log de alteracoes. Nunca publico: traz o e-mail de quem editou.
+    // So' acrescenta: admin nao altera nem apaga entrada antiga, nao assina
+    // com o e-mail de outro e nao escolhe a hora (vale a do servidor).
+    "logs": {
+      ".read": "auth != null && auth.token.email != null && auth.token.email_verified === true && (root.child('admins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true || root.child('leitores').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true)",
+      ".indexOn": ["ts"],
+      "$id": {
+        ".write": "!data.exists() && newData.exists() && auth != null && auth.token.email != null && auth.token.email_verified === true && root.child('admins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === true",
+        ".validate": "newData.hasChildren(['tipo', 'msg', 'usuario', 'ts'])",
+        "tipo":     { ".validate": "newData.isString() && newData.val().matches(/^(edit|add|del|sync|foto)$/)" },
+        "msg":      { ".validate": "newData.isString() && newData.val().length <= 500" },
+        "detalhes": { ".validate": "newData.isString() && newData.val().length <= 1000" },
+        "usuario":  { ".validate": "newData.val() === auth.token.email" },
+        "ts":       { ".validate": "newData.val() === now" },
+        "$outro":   { ".validate": false }
+      }
+    },
+
+    // Cada conta consulta apenas a propria chave, para o site saber o que mostrar.
+    "admins": {
+      "$chave": {
+        ".read": "auth != null && auth.token.email != null && auth.token.email_verified === true && auth.token.email.toLowerCase().replace('.', ',') === $chave"
+      }
+    },
+    "leitores": {
+      "$chave": {
+        ".read": "auth != null && auth.token.email != null && auth.token.email_verified === true && auth.token.email.toLowerCase().replace('.', ',') === $chave"
+      }
+    }
+  }
+}

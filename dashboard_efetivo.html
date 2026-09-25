@@ -8,14 +8,14 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a2940'/%3E%3Cpath d='M32 8l20 8v14c0 12-8 22-20 26C20 52 12 42 12 30V16z' fill='%232196F3'/%3E%3Cpath d='M32 14l14 5.6V30c0 8.4-5.6 15.4-14 18.2C23.6 45.4 18 38.4 18 30v-10.4z' fill='%230d1b2a'/%3E%3C/svg%3E">
 <!-- Bibliotecas servidas do proprio projeto (pasta vendor/). Vinham de CDN e
      o dashboard abria quebrado em rede com proxy ou bloqueio de dominio externo.
-     Versoes: chart.js 4.4.4 | xlsx 0.18.5 | firebase 10.12.2 -->
+     Versoes: chart.js 4.4.4 | xlsx 0.18.5 | firebase 10.12.2 (app, auth, database) -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d1b2a">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="vendor/chart.umd.min.js"></script>
 <script src="vendor/xlsx.full.min.js"></script>
-<script src="efetivo_data.js"></script>
 <script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-auth-compat.js"></script>
 <script src="vendor/firebase-database-compat.js"></script>
 <script>
   const firebaseConfig = {
@@ -28,6 +28,9 @@
     appId: "1:170956670588:web:5068c4ebee85c874182bf9"
   };
   firebase.initializeApp(firebaseConfig);
+  // O login nasce antes do banco: o banco espera a sessao guardada no aparelho
+  // e ja' conecta autenticado, sem uma primeira leitura anonima recusada.
+  const auth = firebase.auth();
   const db = firebase.database();
   const efetivoRef = db.ref('efetivo');
   const syncRef    = db.ref('meta/ultimaSync');
@@ -264,7 +267,25 @@ tbody tr:hover{background:var(--raised)}
 .modo-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:.7rem;font-weight:700;letter-spacing:.5px;margin-left:10px;vertical-align:middle}
 .modo-admin{background:#4CAF5030;color:#4CAF50;border:1px solid #4CAF5050}
 .modo-view{background:#FF980030;color:#FF9800;border:1px solid #FF980050}
+.sync-badge{font-size:.6rem;padding:2px 8px;border-radius:10px;color:#fff;background:#FF9800}
 body.view-mode .edit-only{display:none !important}
+
+/* CONTA — quem entrou, no canto do cabeçalho */
+.conta{margin-top:6px;display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.conta-email{color:var(--ink-dim);font-size:.72rem;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-conta{background:transparent;color:var(--acc);border:1px solid var(--acc);border-radius:6px;padding:4px 10px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-conta:hover{background:#4FC3F720}
+
+/* PORTÃO — cobre a página quando a leitura é restrita e a conta não entrou */
+.acesso-gate{position:fixed;inset:0;z-index:1500;background:var(--ground);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.acesso-gate[hidden]{display:none}
+.acesso-box{max-width:460px;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:28px 24px;text-align:center}
+.acesso-ico{font-size:2rem}
+.acesso-box h2{color:var(--ink);font-size:1.15rem;margin:8px 0 12px;letter-spacing:.5px}
+.acesso-box p{color:var(--ink-dim);font-size:.86rem;line-height:1.55;margin:0 0 10px}
+.acesso-box strong,.acesso-box b{color:var(--ink)}
+.acesso-chave{display:block;margin:4px auto 10px;padding:8px 10px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--acc);font-family:Consolas,'Courier New',monospace;font-size:.85rem;word-break:break-all;user-select:all}
+.acesso-acoes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
 
 @media(max-width:900px){
   .viz-grid{grid-template-columns:1fr}
@@ -275,6 +296,7 @@ body.view-mode .edit-only{display:none !important}
   .header{padding:12px 14px;flex-direction:column;align-items:flex-start}
   .header h1{font-size:1rem;line-height:1.3}
   .header .meta{text-align:left;font-size:.7rem}
+  .conta{justify-content:flex-start}
   /* Era flex-direction:column com btn width:100% -- sete botoes viravam sete
      linhas e empurravam todo o conteudo para baixo da dobra. */
   .toolbar{padding:8px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
@@ -539,11 +561,12 @@ body.view-mode .edit-only{display:none !important}
 </div>
 
 <div class="header">
-  <h1><span>DASHBOARD</span> DO EFETIVO — BEPE <span id="modoBadge"></span></h1>
+  <h1><span>DASHBOARD</span> DO EFETIVO — BEPE <span id="modoBadge"></span> <span id="syncBadge" class="modo-badge sync-badge">⏳ CONECTANDO...</span></h1>
   <div class="meta">
     <div>Polícia Militar do Estado do Rio de Janeiro</div>
     <div>Batalhão Especializado de Policiamento em Estádio</div>
     <div class="date" id="headerDate"></div>
+    <div class="conta" id="contaBox"></div>
   </div>
 </div>
 
@@ -739,7 +762,7 @@ body.view-mode .edit-only{display:none !important}
       </div>
       <div class="form-group full">
         <label>Observação</label>
-        <textarea id="fObs" rows="2" placeholder="Observações adicionais..."></textarea>
+        <textarea id="fObs" rows="2" maxlength="1000" placeholder="Observações adicionais..."></textarea>
       </div>
       <div class="form-group full edit-only">
         <label>Foto do Militar</label>
@@ -764,23 +787,24 @@ body.view-mode .edit-only{display:none !important}
 <!-- MODAL COMPARTILHAR -->
 <div class="modal-overlay" id="shareOverlay" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
   <div class="modal" style="max-width:550px">
-    <h2><span id="shareTitle">Compartilhar Dashboard</span><button class="close" aria-label="Fechar" onclick="fecharCompartilhar()">&times;</button></h2>
+    <h2><span id="shareTitle">Compartilhar e autorizar</span><button class="close" aria-label="Fechar" onclick="fecharCompartilhar()">&times;</button></h2>
     <div style="display:flex;flex-direction:column;gap:16px">
       <div>
-        <label style="font-size:.75rem;color:#FF9800;text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Link Somente Visualização</label>
+        <label style="font-size:.75rem;color:var(--acc);text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Link do dashboard</label>
         <div style="display:flex;gap:8px">
-          <input type="text" id="linkView" readonly aria-label="Link somente visualização" style="flex:1;padding:10px 12px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:.82rem">
+          <input type="text" id="linkView" readonly aria-label="Link do dashboard" style="flex:1;min-width:0;padding:10px 12px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:.82rem">
           <button class="btn btn-outline" onclick="copiarLink('linkView')">Copiar</button>
         </div>
-        <div style="font-size:.7rem;color:var(--ink-faint);margin-top:4px">Quem receber este link pode apenas consultar os dados</div>
+        <div style="font-size:.7rem;color:var(--ink-faint);margin-top:4px">O mesmo link para todos. O que cada pessoa vê e pode fazer depende da conta Google com que ela entra. O antigo link com <code>?acesso=admin</code> não dá mais poder de edição.</div>
       </div>
-      <div class="edit-only">
-        <label style="font-size:.75rem;color:#4CAF50;text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Link Admin (Edição Completa)</label>
+      <div>
+        <label for="emailAutorizar" style="font-size:.75rem;color:#4CAF50;text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Autorizar uma conta Google</label>
+        <input type="email" id="emailAutorizar" placeholder="nome@gmail.com" autocomplete="off" oninput="atualizarChaveAcesso()" style="width:100%;padding:10px 12px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:.82rem">
+        <div style="font-size:.72rem;color:var(--ink-dim);margin:8px 0 6px;line-height:1.5">No console do Firebase, em <b>Realtime Database → Dados</b>, crie a chave abaixo com o valor <b>true</b> dentro de <b>admins</b> (edita abono, observação e fotos) ou de <b>leitores</b> (só consulta).</div>
         <div style="display:flex;gap:8px">
-          <input type="text" id="linkAdmin" readonly aria-label="Link admin" style="flex:1;padding:10px 12px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:.82rem">
-          <button class="btn btn-success" onclick="copiarLink('linkAdmin')">Copiar</button>
+          <input type="text" id="chaveAcesso" readonly aria-label="Chave da conta no banco" placeholder="a chave aparece aqui" style="flex:1;min-width:0;padding:10px 12px;background:var(--ground);border:1px solid var(--line);border-radius:6px;color:var(--acc);font-family:Consolas,'Courier New',monospace;font-size:.82rem">
+          <button class="btn btn-outline" onclick="copiarLink('chaveAcesso')">Copiar</button>
         </div>
-        <div style="font-size:.7rem;color:var(--ink-faint);margin-top:4px">Quem receber este link pode editar abono, observação e fotos</div>
       </div>
     </div>
   </div>
@@ -843,6 +867,17 @@ body.view-mode .edit-only{display:none !important}
   </div>
 </div>
 
+<!-- Aparece quando o banco recusa a leitura: leitura restrita pelo comando
+     (config/leituraPublica diferente de true) e conta ausente ou fora das listas. -->
+<div class="acesso-gate" id="acessoGate" role="dialog" aria-modal="true" aria-labelledby="acessoTitulo" hidden>
+  <div class="acesso-box">
+    <div class="acesso-ico" aria-hidden="true">🔒</div>
+    <h2 id="acessoTitulo">Acesso restrito</h2>
+    <div id="acessoMsg"></div>
+    <div class="acesso-acoes" id="acessoAcoes"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -864,14 +899,151 @@ let fotosCache     = {};
 let _currentFoto   = null; // base64 da foto selecionada no modal
 let _removendoFoto = false;
 
-const params  = new URLSearchParams(window.location.search);
-const isAdmin = params.get('acesso') === 'admin';
+// ─── QUEM ESTÁ USANDO ────────────────────────────────────────────────────────
+// O papel vem do login (conta Google) conferido nas listas /admins e /leitores
+// do banco. Antes vinha do ?acesso=admin na URL -- e, para esse admin conseguir
+// gravar, o banco aceitava escrita de qualquer pessoa. Quem protege os dados
+// agora sao as regras (firebase/database.rules.json); isto aqui so' decide o
+// que a tela mostra.
+let usuarioAtual    = null;         // conta Google da sessao, ou null
+let papel           = 'visitante';  // 'admin' | 'leitor' | 'visitante'
+let isAdmin         = false;
+let _papelConferido = false;        // false enquanto o banco nao respondeu
+
+// Links antigos com ?acesso=admin ainda circulam. Nao dao poder nenhum: servem
+// so' para lembrar a pessoa de entrar com a conta.
+const params = new URLSearchParams(window.location.search);
+const _pediuModoAdmin = params.get('acesso') === 'admin';
+
+// Chave da conta nas listas do banco: e-mail minusculo com "." trocado por ","
+// (o Firebase nao aceita ponto em chave). Tem de bater com a conta das regras.
+function chaveDoEmail(email) {
+  return String(email || '').trim().toLowerCase().replace(/\./g, ',');
+}
+
+function renderPapel() {
+  document.getElementById('modoBadge').innerHTML = isAdmin
+    ? '<span class="modo-badge modo-admin">ADMIN</span>'
+    : '<span class="modo-badge modo-view">SOMENTE VISUALIZAÇÃO</span>';
+  document.body.classList.toggle('view-mode', !isAdmin);
+  renderConta();
+}
+
+function renderConta() {
+  const box = document.getElementById('contaBox');
+  if (!usuarioAtual) {
+    box.innerHTML = '<button type="button" class="btn-conta" onclick="entrar()">Entrar com Google</button>';
+    return;
+  }
+  const estado = _papelConferido ? '' : ' · verificando acesso…';
+  box.innerHTML = `<span class="conta-email" title="Conta conectada">${esc(usuarioAtual.email || 'conta sem e-mail')}${estado}</span>
+    <button type="button" class="btn-conta" onclick="sair()">Sair</button>`;
+}
+
+function aplicarPapel(novo) {
+  const eraAdmin = isAdmin;
+  papel   = novo;
+  isAdmin = novo === 'admin';
+  renderPapel();
+  if (eraAdmin !== isAdmin) refreshAll();   // a coluna "Ações" das tabelas depende disso
+}
+
+// Popup, e nao redirecionamento: o site mora no GitHub Pages, fora do dominio
+// do Firebase, e os navegadores atuais bloqueiam o armazenamento de terceiros
+// de que o redirecionamento depende. E' a opcao que a documentacao do Firebase
+// indica para esse caso.
+function entrar() {
+  const provedor = new firebase.auth.GoogleAuthProvider();
+  provedor.setCustomParameters({ prompt: 'select_account' });
+  auth.signInWithPopup(provedor).catch(err => {
+    const codigo = err && err.code;
+    if (codigo === 'auth/popup-closed-by-user' || codigo === 'auth/cancelled-popup-request') return;
+    const motivo = {
+      'auth/popup-blocked':          'o navegador bloqueou a janela de login. Libere pop-ups para este site e tente de novo.',
+      'auth/unauthorized-domain':    'este endereço não está autorizado no Firebase (Authentication → Settings → Authorized domains).',
+      'auth/operation-not-allowed':  'o login com Google não está ativado no Firebase (Authentication → Sign-in method).',
+      'auth/network-request-failed': 'sem conexão com o serviço de login.',
+    }[codigo] || (err && err.message) || 'erro desconhecido';
+    showToast('❌ Não foi possível entrar: ' + motivo, 'error');
+  });
+}
+
+function sair() {
+  // A copia local do efetivo sai junto: num computador compartilhado, o
+  // proximo a sentar nao pode ver o efetivo so' porque ficou no navegador.
+  limparCopiaLocal();
+  auth.signOut().catch(() => {});
+}
+
+function descobrirPapel(user) {
+  if (!user || !user.email || !user.emailVerified) return Promise.resolve('visitante');
+  const chave = chaveDoEmail(user.email);
+  const consta = lista => {
+    try {
+      return db.ref(lista).child(chave).once('value').then(s => s.val() === true, () => false);
+    } catch (e) {
+      return Promise.resolve(false);   // e-mail com caractere que o Firebase nao aceita em chave
+    }
+  };
+  return Promise.all([consta('admins'), consta('leitores')])
+    .then(([admin, leitor]) => admin ? 'admin' : leitor ? 'leitor' : 'visitante');
+}
+
+// Uma troca de conta pode chegar enquanto o banco ainda responde pela anterior.
+let _seqAuth = 0;
+
+function onAuthMudou(user) {
+  const seq = ++_seqAuth;
+  usuarioAtual    = user || null;
+  _papelConferido = !user;
+  aplicarPapel('visitante');
+  // O banco ja' recebeu a credencial nova (o SDK a entrega antes deste aviso);
+  // as leituras recomecam para valer a permissao da conta que entrou ou saiu.
+  assinarDados();
+  if (!user) { avisarModoAdminAntigo(); return; }
+  descobrirPapel(user).then(p => {
+    if (seq !== _seqAuth) return;
+    _papelConferido = true;
+    aplicarPapel(p);
+    gravarSnapshotDiario();
+    avisarModoAdminAntigo();
+  });
+}
+
+let _avisouModoAdmin = false;
+function avisarModoAdminAntigo() {
+  if (!_pediuModoAdmin || _avisouModoAdmin || isAdmin) return;
+  _avisouModoAdmin = true;
+  showToast(usuarioAtual
+    ? 'Esta conta não é administradora. Editar exige uma conta cadastrada em admins.'
+    : 'Editar agora exige login: clique em "Entrar com Google".', 'info');
+}
+
+// ─── PORTÃO DE ACESSO ────────────────────────────────────────────────────────
+function mostrarPortao() {
+  const msg   = document.getElementById('acessoMsg');
+  const acoes = document.getElementById('acessoAcoes');
+  if (!usuarioAtual) {
+    msg.innerHTML = '<p>O efetivo só é exibido para contas autorizadas pelo comando.</p><p>Entre com a sua conta Google.</p>';
+    acoes.innerHTML = '<button type="button" class="btn btn-primary" onclick="entrar()">Entrar com Google</button>';
+  } else {
+    msg.innerHTML = `<p>A conta <strong>${esc(usuarioAtual.email || '')}</strong> ainda não tem acesso.</p>
+      <p>Peça a um administrador para cadastrá-la. No console do Firebase, em <b>Realtime Database → Dados</b>, ele cria dentro de <b>leitores</b> a chave</p>
+      <code class="acesso-chave">${esc(chaveDoEmail(usuarioAtual.email))}</code>
+      <p>com o valor <b>true</b>. Depois é só recarregar esta página.</p>`;
+    acoes.innerHTML = '<button type="button" class="btn btn-outline" onclick="entrar()">Entrar com outra conta</button>'
+      + '<button type="button" class="btn btn-outline" onclick="sair()">Sair</button>';
+  }
+  const gate = document.getElementById('acessoGate');
+  const abrindo = gate.hidden;
+  gate.hidden = false;
+  if (abrindo) { const b = acoes.querySelector('button'); if (b) b.focus({ preventScroll: true }); }
+}
+
+function esconderPortao() { document.getElementById('acessoGate').hidden = true; }
 
 // ─── INICIALIZAÇÃO ──────────────────────────────────────────────────────────
-if (!isAdmin) document.body.classList.add('view-mode');
-document.getElementById('modoBadge').innerHTML = isAdmin
-  ? '<span class="modo-badge modo-admin">ADMIN</span> <span id="syncBadge" class="modo-badge" style="background:#FF9800;font-size:.6rem;padding:2px 8px;border-radius:10px;color:#fff">⏳ CONECTANDO...</span>'
-  : '<span class="modo-badge modo-view">SOMENTE VISUALIZAÇÃO</span> <span id="syncBadge" class="modo-badge" style="background:#FF9800;font-size:.6rem;padding:2px 8px;border-radius:10px;color:#fff">⏳ CONECTANDO...</span>';
+renderPapel();
 
 db.ref('.info/connected').on('value', snap => {
   const badge = document.getElementById('syncBadge');
@@ -1077,14 +1249,32 @@ function deleteFoto(rg) {
 }
 
 // ─── DADOS ────────────────────────────────────────────────────────────────────
-// Impressao digital do conteudo, nao apenas a contagem de registros.
-// Com a contagem, entrar 1 militar e sair 1 no mesmo dia mantinha o mesmo
-// numero e o navegador continuava servindo o cache antigo.
-function hashDados(arr) {
-  const txt = JSON.stringify(arr);
-  let h = 5381;
-  for (let i = 0; i < txt.length; i++) h = ((h * 33) ^ txt.charCodeAt(i)) >>> 0;
-  return arr.length + '-' + h.toString(36);
+// Copia local do ultimo efetivo recebido, so' para a tela nao nascer vazia.
+// A semente efetivo_data.js (copia de maio, com nome, RG e ID funcional de
+// todos) era publicada no GitHub Pages para qualquer um baixar; saiu do site.
+// A versao descarta, na primeira visita, a copia gravada a partir da semente.
+const VERSAO_COPIA_LOCAL = 'firebase-1';
+
+function carregarCopiaLocal() {
+  try {
+    if (localStorage.getItem(DATA_VERSION_KEY) !== VERSAO_COPIA_LOCAL) { limparCopiaLocal(); return; }
+    const salvo = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (Array.isArray(salvo)) efetivo = salvo;
+  } catch (e) { efetivo = []; }
+}
+
+function salvarCopiaLocal(json) {
+  try {
+    localStorage.setItem(STORAGE_KEY, json);
+    localStorage.setItem(DATA_VERSION_KEY, VERSAO_COPIA_LOCAL);
+  } catch (e) {}
+}
+
+function limparCopiaLocal() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(DATA_VERSION_KEY);
+  } catch (e) {}
 }
 
 // Onde cada militar mora dentro de /efetivo. O Apps Script grava um array, entao
@@ -1092,7 +1282,7 @@ function hashDados(arr) {
 // linha. Por isso o dashboard grava abono/obs pelo RG, nunca pelo indice.
 let chaveFirebasePorRg = {};
 // true so' depois que o dado REAL do Firebase chegou. Ate' la a tela mostra a
-// copia local, que pode ter meses (efetivo_data.js e' a semente de maio).
+// copia local deste aparelho, que pode estar atrasada.
 let dadosDoFirebase = false;
 // Quando esta pagina grava abono/obs, o Firebase devolve o proprio dado.
 let _ecoDeGravacaoLocal = 0;
@@ -1112,60 +1302,78 @@ function hojeLocalISO(d) {
 }
 
 function loadData() {
-  const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
-  const currentVersion = hashDados(DADOS_ORIGINAIS);
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved && savedVersion === currentVersion) {
-    try { efetivo = JSON.parse(saved); } catch(e) { efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS)); }
-  } else {
-    efetivo = JSON.parse(JSON.stringify(DADOS_ORIGINAIS));
-    localStorage.setItem(DATA_VERSION_KEY, currentVersion);
-  }
+  carregarCopiaLocal();
+  // As leituras comecam quando o login termina de restaurar a sessao guardada
+  // (ou conclui que nao ha' nenhuma) e recomecam a cada entrada ou saida.
+  auth.onAuthStateChanged(onAuthMudou);
+}
 
-  efetivoRef.on('value', snapshot => {
-    const data = snapshot.val();
-    if (data) {
-      const pares = Array.isArray(data) ? data.map((m, k) => [String(k), m]) : Object.entries(data);
-      // Fidelidade à planilha: exigir apenas registro válido com nome.
-      // Função/situação em branco na planilha NÃO podem derrubar o militar.
-      const validos = pares.filter(([, m]) => m && typeof m === 'object' && m.nome);
-      // Garantir campos string para o restante do código não quebrar
-      const arr = validos.map(([, m]) => ({ gh:'', rg:'', id:'', cia:'', funcao:'', sit:'', de:'', ate:'', arma:'', colete:'', ferias:'', abono:'', obs:'', cppd:'', ...m }));
-      if (arr.length > 0) {
-        chaveFirebasePorRg = {};
-        validos.forEach(([k, m]) => { const r = normRg(m.rg); if (r) chaveFirebasePorRg[r] = k; });
-        const primeiraCarga = !dadosDoFirebase;
-        dadosDoFirebase = true;
-        // A hora da sincronização vem do Apps Script (ver syncRef abaixo).
-        // Antes carimbava new Date() aqui, ou seja, o relógio de quem abria a
-        // página — o cabeçalho parecia atual mesmo com a sync parada há dias.
-        firebaseReady = true;
-        const newJSON = JSON.stringify(arr);
-        if (newJSON !== JSON.stringify(efetivo)) {
-          efetivo = arr;
-          localStorage.setItem(STORAGE_KEY, newJSON);
-          localStorage.setItem(DATA_VERSION_KEY, currentVersion);
-          refreshAll();
-          // Na primeira carga a pagina so' troca a copia local pelo dado vivo, e
-          // o eco de uma gravacao feita aqui mesmo nao e' novidade: anunciar
-          // "atualizados em tempo real" nesses casos era ruido.
-          if (!primeiraCarga && Date.now() - _ecoDeGravacaoLocal > 5000)
-            showToast('🔄 Dados atualizados em tempo real!', 'info');
-        }
-        gravarSnapshotDiario();
-      }
-    } else {
+// Chamado a cada troca de conta. Uma leitura recusada o banco cancela, e ela
+// nao volta sozinha quando a permissao chega: e' preciso pedir de novo.
+function assinarDados() {
+  efetivoRef.off('value', onEfetivo);
+  syncRef.off('value', onSync);
+  efetivoRef.on('value', onEfetivo, onEfetivoErro);
+  syncRef.on('value', onSync, onSyncErro);
+}
+
+function onEfetivoErro(err) {
+  if (err && err.code === 'PERMISSION_DENIED') {
+    // Leitura restrita pelo comando, e esta conta (ou a falta dela) nao consta
+    // nas listas. Nada do efetivo fica na tela nem no aparelho.
+    dadosDoFirebase    = false;
+    chaveFirebasePorRg = {};
+    fotosCache         = {};
+    limparCopiaLocal();
+    efetivo = [];
+    refreshAll();
+    mostrarPortao();
+    return;
+  }
+  showToast('❌ Erro conexão Firebase: ' + (err && err.message), 'error');
+  const badge = document.getElementById('syncBadge');
+  if (badge) { badge.style.background = '#f44336'; badge.textContent = '❌ ERRO'; }
+}
+
+function onEfetivo(snapshot) {
+  esconderPortao();
+  const data = snapshot.val();
+  if (data) {
+    const pares = Array.isArray(data) ? data.map((m, k) => [String(k), m]) : Object.entries(data);
+    // Fidelidade à planilha: exigir apenas registro válido com nome.
+    // Função/situação em branco na planilha NÃO podem derrubar o militar.
+    const validos = pares.filter(([, m]) => m && typeof m === 'object' && m.nome);
+    // Garantir campos string para o restante do código não quebrar
+    const arr = validos.map(([, m]) => ({ gh:'', rg:'', id:'', cia:'', funcao:'', sit:'', de:'', ate:'', arma:'', colete:'', ferias:'', abono:'', obs:'', cppd:'', ...m }));
+    if (arr.length > 0) {
+      chaveFirebasePorRg = {};
+      validos.forEach(([k, m]) => { const r = normRg(m.rg); if (r) chaveFirebasePorRg[r] = k; });
+      const primeiraCarga = !dadosDoFirebase;
+      dadosDoFirebase = true;
+      // A hora da sincronização vem do Apps Script (ver syncRef abaixo).
+      // Antes carimbava new Date() aqui, ou seja, o relógio de quem abria a
+      // página — o cabeçalho parecia atual mesmo com a sync parada há dias.
       firebaseReady = true;
-      // A planilha e' a fonte da verdade: /efetivo vazio se resolve na proxima
-      // sincronizacao do Apps Script. Antes o navegador de QUALQUER visitante
-      // gravava ali a copia local -- a semente de maio, por cima de tudo.
-      showToast('⚠️ O Firebase está sem o efetivo. Exibindo a última cópia salva neste aparelho.', 'error');
+      const newJSON = JSON.stringify(arr);
+      if (newJSON !== JSON.stringify(efetivo)) {
+        efetivo = arr;
+        salvarCopiaLocal(newJSON);
+        refreshAll();
+        // Na primeira carga a pagina so' troca a copia local pelo dado vivo, e
+        // o eco de uma gravacao feita aqui mesmo nao e' novidade: anunciar
+        // "atualizados em tempo real" nesses casos era ruido.
+        if (!primeiraCarga && Date.now() - _ecoDeGravacaoLocal > 5000)
+          showToast('🔄 Dados atualizados em tempo real!', 'info');
+      }
+      gravarSnapshotDiario();
     }
-  }, err => {
-    showToast('❌ Erro conexão Firebase: ' + err.message, 'error');
-    const badge = document.getElementById('syncBadge');
-    if (badge) { badge.style.background = '#f44336'; badge.textContent = '❌ ERRO'; }
-  });
+  } else {
+    firebaseReady = true;
+    // A planilha e' a fonte da verdade: /efetivo vazio se resolve na proxima
+    // sincronizacao do Apps Script. Antes o navegador de QUALQUER visitante
+    // gravava ali a copia local -- a semente de maio, por cima de tudo.
+    showToast('⚠️ O Firebase está sem o efetivo. Exibindo a última cópia salva neste aparelho.', 'error');
+  }
 }
 
 // Hora REAL da ultima sincronizacao planilha -> Firebase, gravada pelo Apps Script.
@@ -1207,19 +1415,19 @@ function renderUltimaSync(iso) {
   hd.style.color = aviso ? '#ff9800' : '';
 }
 
-// O erro de leitura tem causa diferente de "ainda nao sincronizou": em geral
-// significa que /meta nao esta liberado nas regras do Firebase. Dizer
-// "aguardando" nesse caso mandaria voce esperar por algo que nunca vem.
-syncRef.on('value',
-  snap => renderUltimaSync(snap.val()),
-  err  => {
-    const hd = document.getElementById('headerDate');
-    if (!hd) return;
-    hd.textContent = 'Hora da sincronização indisponível';
-    hd.title = 'Não foi possível ler /meta/ultimaSync no Firebase: ' + (err && err.message ? err.message : 'acesso negado')
-      + '. Libere o caminho /meta nas regras do banco para o cabeçalho exibir a hora real.';
-    hd.style.color = '#F5A524';
-  });
+function onSync(snap) { renderUltimaSync(snap.val()); }
+
+// O erro de leitura tem causa diferente de "ainda nao sincronizou": /meta segue
+// a mesma permissao de leitura do efetivo. Dizer "aguardando" nesse caso
+// mandaria voce esperar por algo que nunca vem.
+function onSyncErro(err) {
+  const hd = document.getElementById('headerDate');
+  if (!hd) return;
+  hd.textContent = 'Hora da sincronização indisponível';
+  hd.title = 'Não foi possível ler /meta/ultimaSync no Firebase: ' + (err && err.message ? err.message : 'acesso negado')
+    + '. Esta conta pode não ter permissão de leitura.';
+  hd.style.color = '#F5A524';
+}
 
 // Pagina aberta por horas (a TV do quartel, a aba esquecida): o aviso de atraso
 // era calculado so' quando o carimbo chegava -- parada ha 3h, a sync seguia
@@ -1783,6 +1991,15 @@ function salvarExtrasNoFirebase(rg, extras) {
   });
 }
 
+// A recusa das regras chega como "permission_denied at /efetivo/12: Client
+// doesn't have permission..." -- verdade, mas nao diz o que fazer.
+function motivoDoErro(err) {
+  const txt = String((err && (err.code || err.message)) || '');
+  if (/permission[_ ]denied/i.test(txt))
+    return 'o Firebase recusou a gravação. Confira se você entrou com a conta de administrador.';
+  return (err && err.message) || 'erro desconhecido';
+}
+
 function salvarMilitar() {
   const rg  = editingRg;
   const mil = rg ? efetivo.find(x => normRg(x.rg) === rg) : null;
@@ -1808,7 +2025,7 @@ function salvarMilitar() {
         showToast(`${nome}: abono e observação atualizados`, 'success');
         registrarLog('edit', `<strong>${nome}</strong> — ${mudancas.join(' · ')}`);
       })
-      .catch(err => showToast('❌ Não foi salvo: ' + err.message, 'error'));
+      .catch(err => showToast('❌ Não foi salvo: ' + motivoDoErro(err), 'error'));
   }
 
   const rgParaFoto = mil.rg;
@@ -1816,10 +2033,11 @@ function salvarMilitar() {
     if (_currentFoto) {
       saveFoto(rgParaFoto, _currentFoto)
         .then(() => showToast('📷 Foto salva com sucesso', 'success'))
-        .catch(err => showToast('❌ Erro ao salvar foto: ' + err.message, 'error'));
+        .catch(err => showToast('❌ Erro ao salvar foto: ' + motivoDoErro(err), 'error'));
       _currentFoto = null;
     } else if (_removendoFoto) {
-      deleteFoto(rgParaFoto);
+      deleteFoto(rgParaFoto)
+        .catch(err => showToast('❌ A foto não foi removida: ' + motivoDoErro(err), 'error'));
       _removendoFoto = false;
     }
   }
@@ -1894,15 +2112,23 @@ function abrirCompartilhar() {
   const base = window.location.origin.includes('localhost')
     ? 'https://bruxo2013.github.io/bepe-dashboard/dashboard_efetivo.html'
     : window.location.origin + window.location.pathname;
-  document.getElementById('linkView').value  = base;
-  document.getElementById('linkAdmin').value = base + '?acesso=admin';
+  document.getElementById('linkView').value = base;
+  document.getElementById('emailAutorizar').value = '';
+  atualizarChaveAcesso();
   abrirOverlay('shareOverlay');
 }
 function fecharCompartilhar() { fecharOverlay('shareOverlay'); }
+// O console do Firebase nao aceita ponto em chave: quem autoriza uma conta
+// digita o e-mail aqui e copia a chave pronta, sem converter de cabeca.
+function atualizarChaveAcesso() {
+  const email = document.getElementById('emailAutorizar').value.trim();
+  document.getElementById('chaveAcesso').value = email ? chaveDoEmail(email) : '';
+}
 function copiarLink(inputId) {
   const input = document.getElementById(inputId);
-  navigator.clipboard.writeText(input.value).then(() => showToast('Link copiado!', 'success'))
-    .catch(() => { input.select(); document.execCommand('copy'); showToast('Link copiado!', 'success'); });
+  if (!input.value) return;
+  navigator.clipboard.writeText(input.value).then(() => showToast('Copiado!', 'success'))
+    .catch(() => { input.select(); document.execCommand('copy'); showToast('Copiado!', 'success'); });
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
@@ -2458,29 +2684,39 @@ function snapshotAtual() {
   };
 }
 
+// Visitante anonimo nao grava mais: sem conta, nao ha como saber quem escreveu,
+// e as regras nao conseguem amarrar a data da chave a hora do servidor -- um
+// anonimo poderia inventar o historico de qualquer dia. Admin e leitor gravam
+// (a TV do quartel entra com uma conta de leitor e mantem o retrato diario).
+function podeGravarHistorico() { return papel === 'admin' || papel === 'leitor'; }
+
 // So' grava com o dado REAL do Firebase. Antes rodava 4s depois de abrir a
 // pagina com o que houvesse na memoria: numa conexao lenta, a copia local
 // (a semente de maio) virava o retrato do dia e a Tendencia ganhava um degrau
 // falso. Chamado a cada carga/atualizacao do efetivo, entao o retrato do dia
 // fica com o ultimo estado visto.
 function gravarSnapshotDiario() {
-  if (!dadosDoFirebase) return Promise.resolve(null);
+  if (!dadosDoFirebase || !podeGravarHistorico()) return Promise.resolve(null);
   const snap = snapshotAtual();
-  return HISTORICO_REF.child(snap.data).set(snap).then(() => snap).catch(() => null);
+  // As regras validam o formato. Falha aqui nao atrapalha a tela, mas nao pode
+  // ser muda: e' assim que um campo novo fora das regras seria percebido.
+  return HISTORICO_REF.child(snap.data).set(snap).then(() => snap)
+    .catch(err => { console.warn('Retrato diário recusado pelo Firebase:', err.message); return null; });
 }
 
 // ─── LOG DE ALTERAÇÕES ───────────────────────────────────────────────────────
 function registrarLog(tipo, msg, detalhes) {
-  if (!isAdmin) return; // só admin gera log
+  if (!isAdmin || !usuarioAtual) return; // só admin gera log
   const entrada = {
-    tipo,                       // 'edit' | 'add' | 'del' | 'sync' | 'foto'
-    msg,                        // texto curto
-    detalhes: detalhes || '',
-    usuario: 'Admin',
-    ts: Date.now(),
-    data: new Date().toISOString()
+    tipo,                                // 'edit' | 'foto'
+    msg: String(msg).slice(0, 500),      // texto curto
+    detalhes: String(detalhes || '').slice(0, 1000),
+    // As regras conferem que o e-mail e' o da conta que grava e que a hora e'
+    // a do servidor. Antes todo registro saia assinado "Admin".
+    usuario: usuarioAtual.email,
+    ts: firebase.database.ServerValue.TIMESTAMP
   };
-  LOG_REF.push(entrada).catch(()=>{});
+  LOG_REF.push(entrada).catch(err => console.warn('Log recusado pelo Firebase:', err.message));
 }
 
 // ─── TENDÊNCIA ───────────────────────────────────────────────────────────────
@@ -2521,9 +2757,11 @@ function carregarTendencia() {
         <span class="ico">📊</span>
         <div style="font-size:.9rem;color:var(--ink);margin-bottom:6px">Ainda não há histórico suficiente</div>
         <div style="font-size:.78rem">O dashboard grava um retrato do efetivo por dia.<br>Volte amanhã para ver a evolução.</div>
-        <div style="margin-top:14px;font-size:.72rem;color:var(--ink-faint)">${dadosDoFirebase
-          ? 'Retrato de hoje registrado ✓'
-          : 'Aguardando os dados do Firebase para registrar o retrato de hoje.'}</div>
+        <div style="margin-top:14px;font-size:.72rem;color:var(--ink-faint)">${!dadosDoFirebase
+          ? 'Aguardando os dados do Firebase para registrar o retrato de hoje.'
+          : podeGravarHistorico()
+            ? 'Retrato de hoje registrado ✓'
+            : 'O retrato do dia é gravado quando alguém com conta autorizada abre o dashboard.'}</div>
       </div>`;
       return;
     }
@@ -3110,7 +3348,12 @@ function carregarLog() {
     const arr = Object.values(dados).filter(l => l && typeof l === 'object').sort((a,b) => (b.ts||0) - (a.ts||0));
     renderLog(arr);
   }).catch(err => {
-    body.innerHTML = `<div class="tend-empty"><span class="ico">❌</span>Não foi possível ler o log: ${esc(err.message)}</div>`;
+    // O log traz o e-mail de quem editou: nunca e' publico, mesmo com a
+    // leitura do efetivo aberta.
+    body.innerHTML = err && err.code === 'PERMISSION_DENIED'
+      ? `<div class="tend-empty"><span class="ico">🔒</span>O log registra quem alterou cada dado e só aparece para contas autorizadas.${usuarioAtual ? ''
+          : '<button type="button" class="btn btn-primary" style="margin:14px auto 0" onclick="entrar()">Entrar com Google</button>'}</div>`
+      : `<div class="tend-empty"><span class="ico">❌</span>Não foi possível ler o log: ${esc(err.message)}</div>`;
   });
 }
 
